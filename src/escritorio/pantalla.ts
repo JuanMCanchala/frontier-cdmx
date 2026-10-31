@@ -84,10 +84,15 @@ export class Pantalla {
     const c = await ConexionVnc.conectar(url, clave);
     const inicio = performance.now();
     while (c.imagenes === 0) {
-      if (c.cerrada)
+      if (c.cerrada) {
+        c.cerrar();
         throw new Error("VNC: la conexión se cerró antes de la primera imagen");
-      if (performance.now() - inicio > 10_000)
+      }
+      // El escritorio tiene una sola ranura: no dejar una conexión viva al rendirse.
+      if (performance.now() - inicio > 20_000) {
+        c.cerrar();
         throw new Error("VNC: no llegó la primera imagen");
+      }
       await pausa(50);
     }
     return new Pantalla(c);

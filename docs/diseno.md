@@ -397,7 +397,7 @@ Detalle por límite en [arquitectura.md](arquitectura.md#3-límites-de-confianza
 
 **Set oculto** (hasta tres corridas por equipo desde `/evento`). Lección de octubre: correrlo apenas pase el primer caso de práctica, no al final. **Pendiente:** no hay corrida registrada en el repo.
 
-**Qué miramos en las trazas** (`DATA_DIR/trazas/<id>/`): el motivo de cierre (`reporto`, `sin_tiempo`, `proceso_caido`, `abortada`, `sin_presupuesto`), los pasos por tarea, cada freno del revisor con su razón, y si cada falla fue daño, error del agente o negación propia. Esa última separación es la que en octubre llegó tarde.
+**Qué miramos.** En `DATA_DIR/tasks/<id>.json` y en la línea de log de la tarea, el motivo de cierre (`stopReason`: `reporto`, `sin_tiempo`, `proceso_caido`, `abortada` o `sin_presupuesto` desde el ejecutor; `tiempo`, `cancelada`, `error_interno` o `reinicio` desde el servidor). En la traza (`DATA_DIR/trazas/<id>/`), los pasos por tarea y cada freno del revisor con su razón. Con ambos, si cada falla fue daño, error del agente o negación propia. Esa última separación es la que en octubre llegó tarde.
 
 **Pendiente de medir:**
 

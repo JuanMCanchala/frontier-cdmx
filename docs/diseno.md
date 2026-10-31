@@ -8,7 +8,8 @@
 2. Todo pasa en un solo bucle. `pi` corre Sonnet 5.5 con razonamiento alto, y el modelo decide cada paso sobre la captura del momento con ocho herramientas propias de pantalla. No hay planificador previo ni plan cerrado: decide el modelo que ve la pantalla.
 3. Un revisor (Haiku 5.5) mira la pantalla antes de cada acción que reconoce como escritura (un clic marcado como guardar, un rótulo con verbo de escritura, Enter) y la frena **solo** si la pantalla contradice la tarea. Lo que no se ve como escritura pasa sin él (sección 9). No hay listas blancas en el código.
 4. Cada tarea corre en su propio proceso de `pi`. Al reportar se cierra la conexión VNC, el proceso se mata y solo después se publica el estado. Nada actúa sobre el escritorio después del reporte ni pasado el plazo.
-5. Medido hoy en el escritorio de práctica: 5 de 5 tareas, entre 25 y 60 s y entre 0.037 y 0.072 USD por tarea ([eval/gasto.md](../eval/gasto.md)). El set oculto todavía no tiene corrida registrada en el repo: es lo primero que falta medir.
+5. Para la primera corrida oficial, el comportamiento se alineó a propósito con la versión de la referencia que sacó 51/56 en el set oculto de octubre. Las mejoras propias, como ampliar una zona de la pantalla, quedan para después de medir (sección 2).
+6. Medido hoy en el escritorio de práctica: 5 de 5 tareas, entre 25 y 60 s y entre 0.037 y 0.072 USD por tarea ([eval/gasto.md](../eval/gasto.md)). El set oculto todavía no tiene corrida registrada en el repo: es lo primero que falta medir.
 
 ## 1. Contexto y problema
 
@@ -44,7 +45,9 @@ Lo que aprendimos:
 - **Corrimos el set oculto tarde**, cuando ya no quedaba margen para corregir. El set oculto se corre apenas pase el primer caso de práctica.
 - **Cuando el costo no limita, conviene el modelo fuerte.** Repartimos el juicio entre modelos baratos y lo rodeamos de controles; los controles terminaron decidiendo por el modelo.
 
-El diseño de referencia es [cuisangelo/frontier-screen-agent](https://github.com/cuisangelo/frontier-screen-agent), que sacó **51/56** en el mismo set: un solo bucle de `pi` con Sonnet 5.5 y un revisor Haiku que frena solo lo que la pantalla contradice. Tomamos esa idea. La implementación es propia: ese repo no tiene licencia, así que se leyó para entender el diseño y no se copió código.
+El diseño de referencia es [cuisangelo/frontier-screen-agent](https://github.com/cuisangelo/frontier-screen-agent), que sacó **51/56** en el mismo set: un solo bucle de `pi` con Sonnet 5.5 y un revisor Haiku que frena solo lo que la pantalla contradice. Tomamos esa idea.
+
+**Para la primera corrida oficial, el comportamiento se alineó a propósito con la versión 51/56 de la referencia** (commit `d876b83`), para partir de algo que ya pasó por el set oculto. Quedaron como en esa versión: el procedimiento de las instrucciones (con los nombres de nuestras herramientas), la consigna y los verbos del revisor, la consigna de las notas por app, las descripciones de `elegir` y de cada captura, el aviso de terminar ya a los 15 s, el ritmo de clic y tecleo, la espera mínima de repintado de 1200 ms, el plazo de 285 s y el tope de 0.50 USD. Las mejoras propias que no estaban en esa versión quedan para después de medir, entre ellas `ampliar` una zona de la pantalla, los verbos extra del revisor (registrar, generar, facturar, bloquear, revertir, reversar), la regla de aprobar un exporte con el filtro más cercano y las instrucciones de confirmar cada dato antes de cambiar un registro y de elegir primero el campo del que depende una lista. Sobre esa versión quedan correcciones propias que no cambian cómo opera el agente sobre la app, entre ellas rescatar la línea `respuesta:` del resumen, no poner `respuesta:` en una tarea `fallida` y cerrar la conexión VNC si la primera imagen no llega en 20 s.
 
 |                       | Aprendiz (octubre)                                                               | Operador (hoy)                                                                    |
 | --------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -172,7 +175,7 @@ Las coordenadas son píxeles de la captura completa. Todas corren en secuencia (
 
 ### 6.3 Revisor
 
-Es un gancho `tool_call` de la extensión: corre antes de que la herramienta se ejecute.
+Es un gancho `tool_call` de la extensión: corre antes de que la herramienta se ejecute. La consigna y la lista de verbos son las de la versión 51/56 de la referencia (sección 2).
 
 - **Cuándo.** `pulsar` con intención `guardar`; `pulsar` con un rótulo que contiene un verbo de escritura (guardar, grabar, aceptar, confirmar, eliminar, borrar, exportar, enviar, aplicar, anular, emitir, pagar, si); `teclas` con Enter. Rótulos como «Registrar», «Generar», «Facturar», «Bloquear», «Revertir» o «Reversar» no lo disparan por sí solos: dependen de que el modelo marque el clic como `guardar`. El verbo se busca como palabra completa, así que «Guardado» no dispara. «Sí» con tilde tampoco: la expresión usa `\b`, que no toma la í como letra, y solo reconoce «Si» sin tilde.
 - **Qué ve.** La tarea original, leída del entorno del proceso y no de lo que diga el modelo; la acción; la evidencia que da el agente (lo que dice haber comprobado en pantallas anteriores); las acciones que ya aprobó en esta tarea; y la captura actual. No ve el historial ni el razonamiento del agente.
@@ -245,7 +248,7 @@ Límites de esa medición:
 ### ADR-1 · Un solo bucle que decide con la pantalla
 
 - **Contexto.** Aprendiz separaba planificar (sin pantalla) de actuar, y una compuerta comparaba cada escritura contra el plan. Unas 19 de las 34 fallas de octubre fueron negaciones de ese mecanismo.
-- **Decisión.** Un modelo fuerte (Sonnet 5.5, razonamiento alto) decide cada paso con la captura del momento. Las instrucciones son un procedimiento general (orientarse, entender la tarea, encontrar, actuar, verificar, reportar) y reglas cortas, sin nada de una app concreta.
+- **Decisión.** Un modelo fuerte (Sonnet 5.5, razonamiento alto) decide cada paso con la captura del momento. Las instrucciones son un procedimiento general (orientarse, entender la tarea, encontrar, actuar, verificar, terminar) y reglas cortas, sin nada de una app concreta: el procedimiento de la versión 51/56 de la referencia (sección 2).
 - **Descartado.**
   - _Planificador con plan cerrado y actor barato_: es Aprendiz; el plan negaba lo que la pantalla permitía.
   - _Replanificar en cada captura con un planificador aparte_: dos modelos razonando sobre lo mismo, más latencia y una interfaz más entre ellos.

@@ -382,6 +382,35 @@ test("el resumen, el error y los logs nunca llevan secretos", async (t) => {
   assert.ok(h.logs.every((l) => !l.includes("\n")));
 });
 
+test("un resultado del ejecutor con campos de otro tipo se publica, se guarda y se registra igual", async (t) => {
+  const h = await start(t);
+  const id = await h.post("A");
+  await waitFor(() => h.calls.length === 1);
+  h.calls[0].resolve({
+    ...result({ resumen: "respuesta: 3" }),
+    error: new Error(`detalle con ${PASSWORD}`),
+    app: 5,
+    stopReason: 7,
+    traceDir: null,
+  } as unknown as TaskResult);
+  await h.app.idle();
+  assert.deepEqual(await h.get(id), {
+    estado: "terminada",
+    resumen: "respuesta: 3",
+  });
+  const stored = JSON.parse(
+    readFileSync(join(h.dataDir, "tasks", `${id}.json`), "utf8"),
+  );
+  assert.equal(stored.estado, "terminada");
+  assert.equal(stored.error, "detalle con [oculto]");
+  assert.equal(stored.stopReason, "desconocido");
+  assert.equal(stored.app, null);
+  assert.ok(
+    h.logs.some((l) => JSON.parse(l).evento === "tarea" && l.includes(id)),
+  );
+  assert.equal(h.manualCalls.length, 0);
+});
+
 test("redact oculta cada secreto en una sola pasada y deja el resto igual", () => {
   assert.equal(redact("a clave b clave", ["clave"]), "a [oculto] b [oculto]");
   assert.equal(redact("x a/b y", ["a/b"]), "x [oculto] y");

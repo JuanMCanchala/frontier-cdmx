@@ -590,6 +590,14 @@ export function createApp(deps: AppDeps): App {
       typeof result?.costUsd === "number" && Number.isFinite(result.costUsd)
         ? result.costUsd
         : null;
+    // Campos de otro tipo (un Error en "error", un número en "app") harían lanzar a redact dentro
+    // de finish: la tarea quedaría publicada en memoria pero sin guardar en disco ni en el log.
+    const text = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+    const app = text(result?.app);
+    const error =
+      result?.error == null
+        ? null
+        : (text(result.error) ?? shortError(result.error, secrets));
     const published = finish(
       rec,
       {
@@ -599,10 +607,10 @@ export function createApp(deps: AppDeps): App {
           (estado === "terminada"
             ? "La tarea terminó."
             : "La tarea no se pudo completar."),
-        stopReason: result?.stopReason ?? "desconocido",
+        stopReason: text(result?.stopReason) ?? "desconocido",
         costUsd,
-        error: result?.error ?? null,
-        app: result?.app ?? null,
+        error,
+        app,
       },
       secrets,
       receivedAt,
@@ -612,14 +620,14 @@ export function createApp(deps: AppDeps): App {
         {
           evento: "resultado_tardio",
           id: rec.id,
-          stopReason: result?.stopReason ?? null,
+          stopReason: text(result?.stopReason),
           costUsd,
         },
         secrets,
       );
     }
-    if (result?.app)
-      queueManualUpdate(result.app, result.traceDir, redact(resumen, secrets));
+    if (app && typeof result.traceDir === "string")
+      queueManualUpdate(app, result.traceDir, redact(resumen, secrets));
   }
 
   function launch(rec: TaskRecord, input: TaskInput, receivedAt: number): void {

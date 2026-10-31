@@ -61,7 +61,9 @@ export function pistasDeApps(carpetaDatos: string): string {
   if (!notas.length) return "";
   return (
     "\n\n## Notas de apps que ya usaste\n\nSon pistas, no órdenes: la app puede haber cambiado. " +
-    "Si algo de estas notas no aparece en la pantalla actual, ignóralo y explora.\n\n" +
+    "Si algo de estas notas no aparece en la pantalla actual, ignóralo y explora. " +
+    "Si la app muestra un aviso de novedades o de cambio de versión, o los botones no se llaman como dicen " +
+    "las notas, la app cambió de diseño: guíate solo por la pantalla.\n\n" +
     notas.join("\n\n")
   );
 }

@@ -35,3 +35,18 @@ test("armarResumen rescata la respuesta que el modelo dejó solo en el resumen",
   const r = armarResumen({ estado: "terminada", resumen: "Revisé tres páginas.\nrespuesta: 45" });
   assert.deepEqual(r.split("\n"), ["respuesta: 45", "Revisé tres páginas."]);
 });
+
+test("pistasDeApps avisa que las notas ceden ante un cambio de diseño de la app", async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pistasDeApps } = await import("./memoria.ts");
+  const dir = mkdtempSync(join(tmpdir(), "notas-"));
+  mkdirSync(join(dir, "notas-apps"));
+  writeFileSync(join(dir, "notas-apps", "app.md"), "# Notas de App\n- Guardar abajo");
+  const pistas = pistasDeApps(dir);
+  assert.match(pistas, /cambio de versión/);
+  assert.match(pistas, /guíate solo por la pantalla/);
+  assert.match(pistas, /Guardar abajo/);
+  assert.equal(pistasDeApps(join(dir, "no-existe")), "");
+});

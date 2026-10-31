@@ -34,3 +34,4 @@ Banco por el contrato HTTP en Railway: 5 de 5, POST entre 281 y 294 ms. Saldo de
 | 2026-10-31T21:59:57.780Z | E3-facturas-vencidas.json (pasa, 42s) | anthropic/claude-sonnet-5.5 (high) | $0.0583 |
 | 2026-10-31T22:00:53.945Z | E4-exportar-pedidos.json (pasa, 51s) | anthropic/claude-sonnet-5.5 (high) | $0.0608 |
 | 2026-10-31T22:01:29.359Z | E5-homonimos.json (pasa, 30s) | anthropic/claude-sonnet-5.5 (high) | $0.0415 |
+| 2026-10-31T22:13Z | E2 por el contrato HTTP en Railway sobre el tema nuevo, con la adaptación desplegada (pasa, 53s, POST 300 ms) | anthropic/claude-sonnet-5.5 (high) | $0.0707 |

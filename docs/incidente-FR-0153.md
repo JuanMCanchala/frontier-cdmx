@@ -72,8 +72,8 @@ que ya no existe.
 con respaldo local (`scripts/bajar-datos.sh`). El agente arranca la corrida sobre el tema nuevo en las mismas
 condiciones que la corrida 1 (34/34, sin notas previas) y aprende las notas del tema nuevo mientras trabaja.
 
-**Verificación:** 41 tests automáticos en verde, uno nuevo para las pistas. Después de desplegar, se corre E2
-por el contrato HTTP en Railway sobre el tema nuevo.
+**Verificación:** 41 tests automáticos en verde, uno nuevo para las pistas. Ya desplegada la adaptación, E2 por el contrato HTTP en Railway sobre el tema nuevo pasa
+en 53 s, con el POST en 300 ms.
 
 ## 5. Cómo lo contamos en el video y el debrief
 

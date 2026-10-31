@@ -26,7 +26,8 @@ La key del evento tiene **$45 sin recarga** (`CDMX_OPENROUTER` en la bóveda).
 - Nada específico de SIGECOM en el código ni en los prompts: la evaluación corre sobre otra app.
 - Secretos: `.env` fuera de git. La contraseña del escritorio nunca entra al contexto del modelo, a
   un log ni a un resumen. Variables locales: `eval "$(cdmx-env)"` (lee la bóveda).
-- El escritorio de pruebas tiene **una sola ranura** VNC: nunca dos procesos sobre él a la vez.
+- El escritorio de pruebas es personal: nunca dos agentes sobre él a la vez. Un visor noVNC compartido y
+  en modo solo ver sí puede mirar mientras el agente trabaja (probado con dos conexiones a la vez).
   `POST /__reset` antes de cada prueba y `POST /__check` para juzgar.
 - Commits atómicos en español con Conventional Commits (`feat(vnc): …`), uno por cambio lógico, sin
   trailers de coautoría.

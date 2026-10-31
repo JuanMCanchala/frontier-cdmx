@@ -110,12 +110,12 @@ export class Pantalla {
   }
 
   /**
-   * Espera a que la pantalla se quede quieta: mira al menos `minimoMs` desde la entrada
-   * (el destello de un botón llega antes que el repintado real), luego exige `quietoMs`
-   * sin cambios, y nunca pasa de `maximoMs`.
+   * Espera a que la pantalla se quede quieta: mira al menos `minimoMs` desde la entrada, porque la
+   * app tarda hasta 1 s en repintar y el destello de un botón llega antes que el repintado real;
+   * luego exige `quietoMs` sin cambios, y nunca pasa de `maximoMs`.
    */
   async esperarCalma(desde: number, op: Calma = {}): Promise<void> {
-    const { minimoMs = 700, quietoMs = 400, maximoMs = 5000 } = op;
+    const { minimoMs = 1200, quietoMs = 400, maximoMs = 5000 } = op;
     for (;;) {
       await pausa(50);
       const ahora = performance.now();

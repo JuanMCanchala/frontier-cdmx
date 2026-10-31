@@ -1,7 +1,7 @@
 // Servidor HTTP del reto: GET /health, POST /tasks y GET /tasks/{task_id}.
 //
 // El ejecutor de tareas se inyecta con createApp para que los tests usen uno falso. Solo el
-// arranque real (este archivo ejecutado como main) importa src/agent/*.
+// arranque real (este archivo ejecutado como main) importa src/operador/*.
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   accessSync,
@@ -22,7 +22,31 @@ import {
 } from "node:http";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { RunOptions, TaskInput, TaskResult } from "./agent/run-task.ts";
+
+/** Lo que el servidor le pide al ejecutor; el arranque real lo traduce a src/operador/ejecutor.ts. */
+export type TaskInput = { tarea: string; wsUrl: string; password: string };
+export type RunOptions = {
+  piBin: string;
+  openrouterKey: string;
+  model: string;
+  guardModel: string;
+  thinking: string;
+  manual: string;
+  dataDir: string;
+  deadlineMs: number;
+  maxCostUsd: number;
+  secrets: string[];
+  signal?: AbortSignal;
+};
+export type TaskResult = {
+  estado: "terminada" | "fallida";
+  resumen: string;
+  costUsd: number;
+  traceDir: string;
+  app: string | null;
+  stopReason: string;
+  error: string | null;
+};
 
 export type Config = {
   port: number;
@@ -891,13 +915,47 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const { runTask } = await import("./agent/run-task.ts");
-  const { manualsForPrompt, updateManual } = await import("./agent/manual.ts");
+  const { ejecutarTarea } = await import("./operador/ejecutor.ts");
+  const { pistasDeApps, aprenderDeTarea } = await import("./operador/memoria.ts");
+  const runner: Runner = async (id, input, opt) => {
+    const d = await ejecutarTarea(
+      id,
+      { tarea: input.tarea, urlVnc: input.wsUrl, clave: input.password },
+      {
+        pi: opt.piBin,
+        keyOpenrouter: opt.openrouterKey,
+        modelo: opt.model,
+        modeloRevisor: opt.guardModel,
+        razonamiento: opt.thinking,
+        pistas: opt.manual,
+        carpetaDatos: opt.dataDir,
+        plazoMs: opt.deadlineMs,
+        topeUsd: opt.maxCostUsd,
+        secretos: opt.secrets,
+        senal: opt.signal,
+      },
+    );
+    return {
+      estado: d.estado,
+      resumen: d.resumen,
+      costUsd: d.costoUsd,
+      traceDir: d.carpetaTraza,
+      app: d.aplicacion,
+      stopReason: d.motivo,
+      error: d.error,
+    };
+  };
   const app = createApp({
     config,
-    runner: runTask,
-    manualText: manualsForPrompt,
-    updateManual,
+    runner,
+    manualText: pistasDeApps,
+    updateManual: (aplicacion, carpetaTraza, resumen, o) =>
+      aprenderDeTarea(aplicacion, carpetaTraza, resumen, {
+        pi: o.piBin,
+        keyOpenrouter: o.openrouterKey,
+        modelo: o.model,
+        carpetaDatos: o.dataDir,
+      }),
   });
   const secrets = [config.teamToken, config.openrouterKey];
   guardProcess((line) => process.stdout.write(`${line}\n`), app.knownSecrets);

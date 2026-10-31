@@ -52,7 +52,7 @@ El diseño de referencia es [cuisangelo/frontier-screen-agent](https://github.co
 | Control de escrituras | Negar por defecto: clasificador, compuerta con lista blanca, detector de efectos | Revisor que frena solo contradicciones visibles                                   |
 | Resumen               | Código determinista desde datos estructurados                                    | El modelo redacta; el código pone la línea `respuesta:` primero y oculta secretos |
 | Lenguaje y estado     | Python, FastAPI, SQLite                                                          | TypeScript en Node 24 sin dependencias, JSON por tarea                            |
-| Set oculto            | A media tarde                                                                    | Apenas pase el primer caso                                                        |
+| Set oculto            | A media tarde                                                                    | Plan: apenas pase el primer caso. **Pendiente:** sin corrida registrada           |
 
 Lo que se conserva de Aprendiz: cliente RFB propio con clic de 150 ms, cerrar antes de publicar, una tarea a la vez por escritorio, memoria por app sin datos del negocio ni coordenadas, y filtro de secretos exactos sin borrar cadenas genéricas.
 

@@ -1,192 +1,193 @@
-# Aprendiz — diagramas de arquitectura
+# Operador — diagramas de arquitectura
 
-Complemento de [diseno.md](diseno.md). Los diagramas están en Mermaid y se leen con cualquier visor de Markdown que lo soporte (GitHub, VS Code con extensión).
+Complemento de [diseno.md](diseno.md). Los diagramas están en Mermaid: GitHub y VS Code (con extensión) los dibujan. Cada uno tiene también su imagen en [`img/`](img/), generada desde el mismo código con `@mermaid-js/mermaid-cli`.
 
 ## 1. Contenedores y límites de confianza
 
 ### 1a. Contenedores
 
-Tres zonas. Lo que viene de la **zona no confiable** (la pantalla del escritorio) es dato: puede informar al actor, pero nunca autoriza una escritura nueva. Esa autoridad solo la tiene el plan, que sale del texto de la tarea y se fija antes de la primera captura. El control de acciones es negar por defecto: todo clic o tecla que pueda comprometer pasa por el clasificador y, si lo es, por la compuerta.
+Tres zonas. Lo que viene de la **zona no confiable** (la pantalla del escritorio) es dato: informa al agente, pero nunca es una orden. El agente corre en un proceso de `pi` por tarea, con un entorno mínimo y sin más herramientas que las de pantalla; el servidor lo mata antes de publicar. La contraseña del escritorio viaja solo por variables de entorno hasta el cliente RFB y nunca llega a un modelo.
 
 ```mermaid
 flowchart LR
     EV["Evaluador<br/>consulta cada 5 s"]
 
-    subgraph SVC["Aprendiz — contenedor siempre encendido (zona confiable)"]
+    subgraph SVC["Contenedor siempre encendido en Railway · zona confiable"]
         direction TB
-        API["API FastAPI<br/>/health · POST /tasks · GET /tasks/id<br/>Bearer token (salvo /health)"]
-        ORQ["Orquestador + ciclo de la tarea<br/>ver vista 1b"]
-        WD["Watchdog<br/>deadline monotónico 4:20<br/>revoca el token de generación"]
-        DRV["Driver RFB propio<br/>clic 150 ms · estabilidad ≤ 1.5 s"]
-        DB[("SQLite en volumen<br/>estado de tareas · memoria por app")]
-        TRZ[("Trazas por tarea")]
+        SRV["Servidor HTTP · servidor.ts<br/>/health · POST /tasks · GET /tasks/id<br/>Bearer salvo /health"]
+        EJE["Ejecutor · ejecutor.ts<br/>un proceso de pi por tarea<br/>plazo 280 s · tope 0.60 USD"]
+        subgraph PI["Proceso de pi de la tarea · entorno mínimo"]
+            direction TB
+            AG["Agente<br/>instrucciones.md + notas por app"]
+            EXT["Extensión herramientas.ts<br/>9 herramientas · revisor · traza"]
+            RFB["Cliente RFB propio<br/>src/escritorio"]
+        end
+        MEM["Notas por app · memoria.ts<br/>otro pi, sin herramientas"]
+        DATA[("DATA_DIR · /data<br/>tasks · trazas · notas-apps")]
     end
 
-    subgraph LLM["OpenRouter (externo)"]
-        MOD["Sonnet 5.5 · GPT-6.1 Sol<br/>actor UI-TARS 7B o Haiku 5.5<br/>clasificador pequeño"]
+    subgraph OR["OpenRouter · externo"]
+        SON["Sonnet 5.5 · razonamiento high<br/>agente"]
+        HAI["Haiku 5.5<br/>revisor y notas"]
     end
 
     subgraph UNT["Zona NO confiable"]
-        APP["Escritorio VNC 1280×800<br/>app desconocida en kiosko<br/>su contenido es dato, no instrucción"]
+        APP["Escritorio VNC 1280×800<br/>app desconocida en kiosco<br/>su contenido es dato, no orden"]
     end
 
-    EV -->|"HTTPS · POST responde task_id < 2 s<br/>GET estado + resumen"| API
-    API -->|"graba y encola · asíncrono"| ORQ
-    ORQ -->|"entradas autorizadas"| DRV
-    WD -.->|"revoca al vencer"| DRV
-    DRV <-->|"RFB sobre wss<br/>entradas ↔ framebuffer"| APP
-    ORQ <-->|"texto, capturas y recortes<br/>nunca la contraseña"| MOD
-    ORQ --- DB
-    ORQ -.- TRZ
+    EV -->|"HTTPS · task_id enseguida<br/>estado y resumen"| SRV
+    SRV -->|"tarea, escritorio, plazo restante"| EJE
+    EJE -->|"lanza con variables de entorno<br/>SIGKILL al reporte o al corte"| AG
+    AG <-->|"prompt, capturas, herramientas"| SON
+    AG -->|"una herramienta por turno"| EXT
+    EXT <-->|"tarea original, acción, captura"| HAI
+    EXT --> RFB
+    RFB <-->|"RFB sobre wss<br/>entradas ↔ framebuffer"| APP
+    SRV -.->|"tras publicar, en serie"| MEM
+    MEM <-.->|"bitácora → notas"| HAI
+    SRV --- DATA
+    EXT -.- DATA
+    MEM -.- DATA
 
     classDef untrusted fill:#fde2e2,stroke:#c0392b,color:#000
     classDef external fill:#fff4d6,stroke:#b9770e,color:#000
     classDef ours fill:#e3f1e3,stroke:#2e7d32,color:#000
     class APP untrusted
-    class MOD external
-    class API,ORQ,WD,DRV,DB,TRZ ours
+    class SON,HAI external
+    class SRV,EJE,AG,EXT,RFB,MEM,DATA ours
 ```
 
-### 1b. Componentes del ciclo de la tarea
+Imagen: [img/1a-contenedores.png](img/1a-contenedores.png).
 
-Cada caja dice qué modelo usa; todas las llamadas a modelos salen por el mismo cliente con timeout, reintentos acotados y tope de costo.
+### 1b. Componentes del ciclo de una tarea
+
+Cada caja dice qué modelo usa, si usa uno. Solo las acciones de escritura pasan por el revisor; las lecturas y el resto de las acciones van directo a la pantalla. Toda acción devuelve la captura posterior y los segundos que quedan, y el agente decide el paso siguiente con ella.
 
 ```mermaid
-flowchart LR
-    P["1 · Planificador<br/><i>Sonnet 5.5</i><br/>solo el texto de la tarea<br/>→ intención y escrituras permitidas<br/>congeladas + parámetros"]
-    A["2 · Loop del actor<br/><i>UI-TARS 7B o Haiku 5.5</i><br/>captura → acción<br/>tope 45 pasos"]
-    C["3 · Clasificador de recorte<br/><i>modelo pequeño</i><br/>240×120 px, sin historial<br/>navegación · búsqueda · compromiso"]
-    G{"4 · Compuerta<br/><i>GPT-6.1 Sol</i><br/>¿en el plan? ¿entidad única?<br/>diff del formulario"}
-    X["Driver<br/>ejecuta la acción"]
-    D["5 · Detector de efectos<br/><i>modelo pequeño</i><br/>captura antes/después"]
-    V["6 · Verificador<br/><i>Sonnet 5.5</i><br/>solo lecturas · antes/después<br/>exige confirmación visible"]
-    R["7 · Redactor<br/><i>código</i><br/>resumen determinista<br/>+ filtro de secretos"]
+flowchart TB
+    T["Tarea + instrucciones + notas por app"]
+    A["Agente · Sonnet 5.5<br/>decide con la captura del momento<br/>una herramienta por turno"]
+    L["Lecturas<br/>ver_pantalla · ampliar"]
+    W{"¿Escritura?<br/>pulsar con guardar o verbo en el rótulo<br/>teclas con Enter"}
+    ACC["Acciones sin revisor<br/>pulsar navegar o editar · escribir · llenar<br/>elegir · desplazar · otras teclas"]
+    R{"Revisor · Haiku 5.5<br/>tarea original + captura actual<br/>+ lo comprobado + lo ya aprobado"}
+    P["Pantalla · cliente RFB<br/>clic de 150 ms · espera de calma<br/>mín. 700 ms, 400 ms quieta, tope 5 s"]
+    O["Captura posterior<br/>+ segundos que quedan"]
+    REP["reportar<br/>reporte.json · cierra VNC<br/>bloquea lo que siga"]
+    CUT["Corte del ejecutor<br/>plazo · tope de costo<br/>otra tarea en el escritorio · pi caído"]
+    EJ["Ejecutor<br/>SIGKILL a pi y espera su salida"]
+    RES["Resumen · código<br/>respuesta primero · secretos ocultos"]
+    PUB["Servidor publica<br/>terminada o fallida"]
+    MEM["Notas por app · Haiku 5.5<br/>en segundo plano"]
 
-    P --> A
-    A -->|"clic, Enter o atajo"| C
-    C -->|"lectura"| X
-    C -->|"compromiso o duda"| G
-    G -->|"permitida"| X
-    G -->|"denegada corregible<br/>(vuelve con el motivo, máx. 2)"| A
-    G -->|"ambigua o sin evidencia"| R
-    X --> D
-    D -->|"sin efecto no autorizado"| A
-    D -->|"escritura no autorizada → aborta"| R
-    A -->|"actor declara terminado"| V
-    V -->|"verificado o no"| R
+    T --> A
+    A --> L
+    A --> W
+    W -->|"no"| ACC
+    W -->|"sí"| R
+    R -->|"aprueba"| P
+    R -->|"frena con la razón<br/>al tercer freno, pedir fallida"| A
+    ACC --> P
+    L --> O
+    P --> O
+    O --> A
+    A -->|"reportar"| REP
+    REP --> EJ
+    CUT -.-> EJ
+    EJ --> RES
+    RES --> PUB
+    PUB -.-> MEM
 
     classDef gate fill:#dbe7ff,stroke:#1f4fb4,color:#000
     classDef ours fill:#e3f1e3,stroke:#2e7d32,color:#000
-    class P,A,C,X,D,V,R ours
-    class G gate
+    classDef cut fill:#fde2e2,stroke:#c0392b,color:#000
+    class T,A,L,ACC,P,O,REP,EJ,RES,PUB,MEM ours
+    class W,R gate
+    class CUT cut
 ```
 
-Líneas continuas: control y datos dentro del servicio. Punteadas: llamadas a modelos, almacenamiento y el watchdog.
+Imagen: [img/1b-componentes.png](img/1b-componentes.png).
 
-Qué marca cada límite:
-
-| Límite | Qué lo cruza | Regla |
-| --- | --- | --- |
-| Cliente → servicio | Tarea y credenciales del escritorio | Bearer token en `POST /tasks` y `GET /tasks/{id}`; `/health` no lo exige y lo acepta si viene. La contraseña del escritorio solo se usa en la autenticación VNC dentro del driver. |
-| Servicio → proveedores LLM | Texto de la tarea, capturas, recortes, plan | La contraseña y los tokens no se envían. Las capturas sí pueden mostrar datos sensibles del negocio. Timeout y reintentos acotados en el módulo cliente. |
-| Servicio ↔ escritorio | Entradas de teclado y ratón; framebuffer | Todo lo que vuelve es píxeles no confiables. Ninguna escritura se autoriza por lo que la pantalla diga. |
+Líneas continuas: el camino de una tarea. Punteadas: el corte del ejecutor y la actualización de notas, que corre después de publicar.
 
 ## 2. Secuencia de una tarea
 
-Tres caminos de salida: cierre normal (verificador), corte de tiempo (watchdog) y aborto por escritura no autorizada. En todos, la conexión VNC se cierra antes de publicar el estado, para que ninguna acción tardía caiga en la tarea siguiente. Una denegación corregible vuelve al actor con el motivo; ambigüedad de entidad o falta de evidencia terminan la tarea `fallida`.
+Un solo camino de salida: el ejecutor mata `pi` y solo después el servidor publica. Lo que lo dispara puede ser el reporte del agente, el plazo, el tope de costo, otra tarea para el mismo escritorio o la caída del proceso. Si el ejecutor no devuelve, el servidor tiene un respaldo propio.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant EV as Evaluador
-    participant API as API FastAPI
-    participant ORQ as Orquestador
-    participant WD as Watchdog
-    participant PLAN as Planificador (sonnet)
-    participant ACT as Loop del actor
-    participant CLS as Clasificador de recorte
-    participant GATE as Compuerta (gpt-6.1-sol)
-    participant DRV as Driver RFB
-    participant DET as Detector de efectos
-    participant VER as Verificador (sonnet)
-    participant RED as Redactor
+    participant SRV as Servidor
+    participant EJE as Ejecutor
+    participant PI as pi con Sonnet 5.5
+    participant HER as Herramientas
+    participant REV as Revisor Haiku 5.5
+    participant ESC as Escritorio VNC
+    participant MEM as Notas por app
 
-    EV->>API: POST /tasks (tarea, escritorio)<br/>Bearer token
-    API->>ORQ: grabar en SQLite y encolar (ASÍNCRONO)<br/>deadline = t0 + 260 s (monotónico)
-    API-->>EV: 200 {task_id} en menos de 2 s
-    ORQ->>WD: armar watchdog con el deadline
-    loop cada 5 s, hasta estado final
-        EV->>API: GET /tasks/task_id
-        API-->>EV: {estado: en_curso, resumen: ""}
+    EV->>SRV: POST /tasks con tarea y escritorio, Bearer
+    SRV->>SRV: validar, crear task_id, guardar en_curso
+    SRV-->>EV: 200 con task_id, antes de lanzar el agente
+    opt ya hay una tarea en el mismo escritorio
+        SRV->>EJE: abortar la tarea anterior
+        Note over SRV,EJE: la nueva espera hasta 15 s, descontados de su plazo
     end
-
-    ORQ->>ORQ: tomar el lock del escritorio (la espera cuenta contra el deadline)
-    ORQ->>DRV: conectar, autenticar VNC, validar 1280x800
-    alt falla la conexión o la resolución no es 1280x800
-        DRV-->>ORQ: error con mensaje claro (sin contraseña)
-        ORQ->>RED: fallida
-    else conexión válida
-        Note over ORQ,PLAN: El plan se fija ANTES de la primera captura
-        ORQ->>PLAN: texto de la tarea (sin pantalla)
-        PLAN-->>ORQ: plan: tipo, escrituras permitidas, entidad nombrada,<br/>parámetros pendientes (hoy_app + 1), bandera sospechosa
+    SRV->>EJE: tarea, plazo restante, notas, secretos
+    EJE->>PI: lanzar sin herramientas incorporadas, solo la extensión<br/>URL y contraseña por variables de entorno
+    loop cada 5 s hasta el estado final
+        EV->>SRV: GET /tasks/task_id
+        SRV-->>EV: en_curso
     end
-
-    alt el plan es peligrosa por el texto (masiva o irreversible)
-        ORQ->>RED: fallida sin tocar la app
-    else tarea ejecutable
-        ORQ->>ACT: plan + pistas de la memoria
-        loop mientras haya tiempo, menos de 45 pasos y costo menor que 0.15 USD
-            ACT->>DRV: capturar (espera de estabilidad, tope 1.5 s)
-            DRV-->>ACT: framebuffer estable
-            ACT->>ACT: acción propuesta + regla de texto<br/>(solo texto de la tarea o calculado por código)
-            alt scroll o movimiento
-                ACT->>DRV: ejecutar
-            else clic, Enter o atajo (candidato a compromiso)
-                ACT->>CLS: recorte 240x120 alrededor del punto, sin historial
-                CLS-->>ACT: navegación, búsqueda/filtro o compromiso
-                alt navegación o búsqueda/filtro
-                    ACT->>DRV: ejecutar (clic de 150 ms)
-                else compromiso, error o duda del clasificador
-                    ACT->>GATE: plan + resolución de entidad<br/>+ capturas: formulario al abrir y al comprometer
-                    Note over GATE: ¿está en el plan? ¿cambios del formulario coinciden?<br/>¿entidad única? ¿ya existe? ¿un solo exporte?
-                    alt permitida
-                        GATE-->>ACT: permitir
-                        ACT->>DRV: ejecutar la escritura
-                    else denegada por motivo corregible (falta búsqueda, fuera de plan)
-                        GATE-->>ACT: denegar con motivo (máximo 2 veces por acción)
-                    else entidad ambigua o sin evidencia
-                        GATE-->>ORQ: denegar: fallida nombrando el dato que distingue a cada candidato
-                    end
-                end
+    PI->>HER: ver_pantalla
+    HER->>ESC: conectar y autenticar VNC
+    ESC-->>HER: framebuffer
+    HER-->>PI: captura + segundos que quedan
+    loop hasta reportar o hasta el corte
+        PI->>HER: herramienta con coordenadas
+        alt escritura, es decir guardar, verbo en el rótulo o Enter
+            HER->>REV: tarea original, acción, lo comprobado, lo aprobado, captura actual
+            alt la pantalla contradice la tarea o el revisor falla
+                REV-->>HER: frena con la razón
+                HER-->>PI: acción bloqueada con la razón<br/>al tercer freno, pedir fallida
+            else coherente con la tarea
+                REV-->>HER: aprueba
+                HER->>ESC: clic o tecla a ritmo humano
+                ESC-->>HER: pantalla calmada
+                HER-->>PI: captura posterior + segundos que quedan
             end
-            Note over DRV,DET: el detector es síncrono: la acción siguiente espera su veredicto
-            DRV-->>DET: capturas antes y después de la acción
-            DET-->>ORQ: ¿hubo escritura no autorizada?
-            opt el detector encontró una escritura no autorizada
-                ORQ->>ACT: abortar (no se intenta deshacer)
-                Note over ORQ: estado fallida, el resumen lo declara
-            end
-            ACT-->>ORQ: traza: captura, acción, costo
+        else lectura u otra acción
+            HER->>ESC: entrada o captura
+            ESC-->>HER: pantalla calmada
+            HER-->>PI: captura + segundos que quedan
         end
     end
-
-    alt el actor declara terminado antes del deadline
-        ACT->>VER: tarea hecha (el actor declara, el verificador manda)
-        VER->>DRV: relectura de solo lectura (compromisos denegados)
-        DRV-->>VER: capturas de la entidad antes y después, mensaje de confirmación
-        VER-->>ORQ: verificado o no, con evidencia
-    else deadline, tope de costo o tope de pasos
-        WD->>DRV: revocar token de generación (el emisor descarta eventos viejos)
-        WD->>ORQ: deadline cumplido
-        Note over DRV,ORQ: la acción en vuelo tiene 2 s para terminar<br/>sin verificación completa el estado es fallida
-    end
-
-    ORQ->>DRV: cerrar conexión VNC
-    DRV-->>ORQ: cerrada
-    ORQ->>RED: estado + datos estructurados
-    RED->>RED: armar resumen, línea "respuesta:", filtro de secretos
-    RED-->>ORQ: resumen final
-    ORQ->>API: grabar en SQLite y publicar estado final (terminada o fallida)
-    EV->>API: GET /tasks/task_id
-    API-->>EV: {estado: terminada o fallida, resumen}
+    PI->>HER: reportar estado, aplicación, respuesta y resumen
+    HER->>HER: escribir reporte.json y bloquear lo que siga
+    HER->>ESC: cerrar la conexión VNC
+    EJE->>EJE: ve el reporte en su revisión cada 250 ms
+    Note over EJE,PI: también corta por plazo, tope de costo, aborto o proceso caído
+    EJE->>PI: SIGKILL y esperar la salida
+    EJE->>EJE: armar el resumen con la respuesta primero, ocultar secretos
+    EJE-->>SRV: desenlace
+    SRV->>SRV: ocultar secretos otra vez, guardar y publicar
+    Note over SRV: respaldo si el ejecutor no devuelve<br/>pedir parar a plazo + 5 s, publicar fallida a plazo + 10 s
+    EV->>SRV: GET /tasks/task_id
+    SRV-->>EV: terminada o fallida + resumen
+    SRV-)MEM: actualizar las notas de la app, en serie
 ```
+
+Imagen: [img/2-secuencia.png](img/2-secuencia.png).
+
+## 3. Límites de confianza
+
+| Límite                       | Qué lo cruza                                                                                                                    | Regla                                                                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evaluador → servidor         | Tarea, URL y contraseña del escritorio                                                                                          | Bearer en `POST /tasks` y `GET /tasks/{id}`, comparado en tiempo constante; `/health` no lo exige y lo acepta si viene. Cuerpo de hasta 64 KB, validado. La contraseña entra a la lista de secretos apenas llega.                      |
+| Servidor → proceso de `pi`   | Tarea, URL y contraseña del escritorio, key de OpenRouter                                                                       | Entorno mínimo y explícito: el token del equipo no pasa. La tarea va en el prompt; la URL y la contraseña, solo en variables de entorno. `pi` corre sin herramientas incorporadas, extensiones, skills ni archivos de contexto ajenos. |
+| Proceso de `pi` → OpenRouter | Instrucciones, notas, tarea, capturas, ampliaciones y resultados de herramientas; al revisor, la tarea, la acción y una captura | La contraseña nunca. El host del escritorio solo aparece si falla la conexión, en el mensaje de error. Las capturas pueden mostrar datos del negocio.                                                                                  |
+| Herramientas ↔ escritorio    | Entradas de ratón y teclado; framebuffer                                                                                        | Todo lo que vuelve son píxeles no confiables: información, nunca órdenes. Las escrituras pasan antes por el revisor.                                                                                                                   |
+| Proceso de `pi` → servidor   | `reporte.json` y la salida de error                                                                                             | El proceso ya está muerto cuando se publica. Resumen y errores se redactan dos veces, en el ejecutor y en el servidor.                                                                                                                 |
+| Servidor → notas por app     | Bitácora de la traza (sin valores tecleados) y el resumen final                                                                 | La consigna prohíbe datos de registros, resultados y coordenadas. El resumen puede traer datos: no está garantizado que no pasen.                                                                                                      |
+| Contenedor → disco           | Estado de tareas, trazas (capturas, acciones, texto tecleado) y notas                                                           | Quedan en `DATA_DIR` dentro del contenedor; `data/` y `.env` quedan fuera de git y de la imagen.                                                                                                                                       |
+| Servidor → logs              | Una línea JSON por evento                                                                                                       | Redactada con todos los secretos conocidos, incluidas las contraseñas de escritorios recibidas antes.                                                                                                                                  |

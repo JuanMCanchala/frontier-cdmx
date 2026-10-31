@@ -116,8 +116,8 @@ async function start(
     agentModel: "modelo/agente",
     guardModel: "modelo/guardia",
     thinking: "high",
-    deadlineMs: 280_000,
-    maxCostUsd: 0.6,
+    deadlineMs: 285_000,
+    maxCostUsd: 0.5,
     graceMs: 10_000,
     abortWaitMs: 15_000,
     ...over,
@@ -314,8 +314,8 @@ test("POST /tasks responde enseguida y la tarea pasa de en_curso a terminada", a
   assert.equal(call.opt.model, "modelo/agente");
   assert.equal(call.opt.guardModel, "modelo/guardia");
   assert.equal(call.opt.openrouterKey, OR_KEY);
-  assert.equal(call.opt.maxCostUsd, 0.6);
-  assert.ok(call.opt.deadlineMs > 279_000 && call.opt.deadlineMs <= 280_000);
+  assert.equal(call.opt.maxCostUsd, 0.5);
+  assert.ok(call.opt.deadlineMs > 284_000 && call.opt.deadlineMs <= 285_000);
   assert.deepEqual(
     new Set(call.opt.secrets),
     new Set([PASSWORD, TOKEN, OR_KEY]),
@@ -760,8 +760,8 @@ test("loadConfig aplica los valores por defecto y exige TEAM_TOKEN y OPENROUTER_
   assert.equal(c.agentModel, "anthropic/claude-sonnet-5.5");
   assert.equal(c.guardModel, "anthropic/claude-haiku-5.5");
   assert.equal(c.thinking, "high");
-  assert.equal(c.deadlineMs, 280_000);
-  assert.equal(c.maxCostUsd, 0.6);
+  assert.equal(c.deadlineMs, 285_000);
+  assert.equal(c.maxCostUsd, 0.5);
   assert.equal(c.graceMs, 10_000);
   const custom = loadConfig({
     TEAM_TOKEN: "t",

@@ -178,8 +178,8 @@ export function loadConfig(env: Env = process.env): Config {
     agentModel: text(env, "AGENT_MODEL", "anthropic/claude-sonnet-5.5"),
     guardModel: text(env, "GUARD_MODEL", "anthropic/claude-haiku-5.5"),
     thinking: text(env, "AGENT_THINKING", "high"),
-    deadlineMs: positive(env, "TASK_DEADLINE_MS", 280_000),
-    maxCostUsd: positive(env, "MAX_COST_USD", 0.6),
+    deadlineMs: positive(env, "TASK_DEADLINE_MS", 285_000),
+    maxCostUsd: positive(env, "MAX_COST_USD", 0.5),
     graceMs: positive(env, "TASK_GRACE_MS", 10_000),
     abortWaitMs: positive(env, "ABORT_WAIT_MS", 15_000),
   };

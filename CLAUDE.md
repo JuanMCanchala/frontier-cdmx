@@ -18,7 +18,7 @@ La key del evento tiene **$45 sin recarga** (`CDMX_OPENROUTER` en la bóveda).
 - Antes de una corrida que gasta, consultar el saldo y empezar con **una** tarea. Si la corrida
   estimada pasa de $1, pedir confirmación.
 - Cada corrida que gasta se anota en `eval/gasto.md`.
-- Tope duro: cada tarea se aborta si pasa de `MAX_COST_USD` (por defecto $0.60).
+- Tope duro: cada tarea se aborta si pasa de `MAX_COST_USD` (por defecto $0.50).
 
 ## Reglas
 

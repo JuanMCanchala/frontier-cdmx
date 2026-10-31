@@ -116,4 +116,4 @@ Las notas viven en `<carpetaDatos>/notas-apps/<app>.md`.
 Contrato HTTP de `material/README.md` ("Qué entregas a las 20:00"). Configuración por entorno:
 `PORT`, `TEAM_TOKEN`, `OPENROUTER_API_KEY`, `DATA_DIR`, `PI_BIN`, `AGENT_MODEL`
 (`anthropic/claude-sonnet-5.5`), `GUARD_MODEL` (`anthropic/claude-haiku-5.5`), `AGENT_THINKING`
-(`high`), `TASK_DEADLINE_MS` (280000), `MAX_COST_USD` (0.6).
+(`high`), `TASK_DEADLINE_MS` (285000), `MAX_COST_USD` (0.5).

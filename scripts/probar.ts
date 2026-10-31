@@ -31,8 +31,8 @@ const d = await ejecutarTarea(`${prueba.id}-${t}`, { tarea: prueba.instruccion, 
   razonamiento,
   pistas: conMemoria ? pistasDeApps(carpetaDatos) : "",
   carpetaDatos,
-  plazoMs: Number(process.env.TASK_DEADLINE_MS ?? 280_000),
-  topeUsd: Number(process.env.MAX_COST_USD ?? 0.6),
+  plazoMs: Number(process.env.TASK_DEADLINE_MS ?? 285_000),
+  topeUsd: Number(process.env.MAX_COST_USD ?? 0.5),
   secretos: [clave, key, process.env.TEAM_TOKEN ?? "", process.env.DESKTOP_TOKEN ?? ""],
 });
 const segundos = Math.round((Date.now() - t) / 1000);

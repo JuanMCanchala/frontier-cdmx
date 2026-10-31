@@ -28,3 +28,17 @@ test("Dockerfile: todo proceso node de la imagen (también pi) carga el proveedo
   assert.equal(env.get("PI_BIN"), "/pnpm/pi");
   assert.equal(env.get("DATA_DIR"), "/data");
 });
+
+test("railway.json: una réplica despierta que siempre se reinicia y con chequeo de salud", () => {
+  const railway = JSON.parse(
+    readFileSync(new URL("railway.json", root), "utf8"),
+  );
+  assert.equal(railway.build.builder, "DOCKERFILE");
+  // Las tareas viven en memoria: con dos réplicas, GET /tasks/{id} caería en la que no la tiene.
+  assert.equal(railway.deploy.numReplicas, 1);
+  // Dormida, el primer POST /tasks pagaría el arranque en frío y pasaría de 2 s.
+  assert.equal(railway.deploy.sleepApplication, false);
+  // ON_FAILURE deja de reiniciar tras N caídas: el agente quedaría fuera el resto del demo day.
+  assert.equal(railway.deploy.restartPolicyType, "ALWAYS");
+  assert.equal(railway.deploy.healthcheckPath, "/health");
+});

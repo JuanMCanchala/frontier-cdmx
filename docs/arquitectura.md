@@ -15,15 +15,15 @@ flowchart LR
     subgraph SVC["Contenedor siempre encendido en Railway · zona confiable"]
         direction TB
         SRV["Servidor HTTP · servidor.ts<br/>/health · POST /tasks · GET /tasks/id<br/>Bearer salvo /health"]
-        EJE["Ejecutor · ejecutor.ts<br/>un proceso de pi por tarea<br/>plazo 280 s · tope 0.60 USD"]
+        EJE["Ejecutor · ejecutor.ts<br/>un proceso de pi por tarea<br/>plazo 285 s · tope 0.50 USD"]
         subgraph PI["Proceso de pi de la tarea · entorno mínimo"]
             direction TB
             AG["Agente<br/>instrucciones.md + notas por app"]
-            EXT["Extensión herramientas.ts<br/>9 herramientas · revisor · traza"]
+            EXT["Extensión herramientas.ts<br/>8 herramientas · revisor · traza"]
             RFB["Cliente RFB propio<br/>src/escritorio"]
         end
         MEM["Notas por app · memoria.ts<br/>otro pi, sin herramientas"]
-        DATA[("DATA_DIR · /data<br/>tasks · trazas · notas-apps")]
+        DATA[("DATA_DIR · volumen /data<br/>tasks · trazas · notas-apps")]
     end
 
     subgraph OR["OpenRouter · externo"]
@@ -67,11 +67,11 @@ Cada caja dice qué modelo usa, si usa uno. Solo las acciones de escritura pasan
 flowchart TB
     T["Tarea + instrucciones + notas por app"]
     A["Agente · Sonnet 5.5<br/>decide con la captura del momento<br/>una herramienta por turno"]
-    L["Lecturas<br/>ver_pantalla · ampliar"]
+    L["Lectura<br/>ver_pantalla"]
     W{"¿Escritura?<br/>pulsar con guardar o verbo en el rótulo<br/>teclas con Enter"}
     ACC["Acciones sin revisor<br/>pulsar navegar o editar · escribir · llenar<br/>elegir · desplazar · otras teclas"]
     R{"Revisor · Haiku 5.5<br/>tarea original + captura actual<br/>+ lo comprobado + lo ya aprobado"}
-    P["Pantalla · cliente RFB<br/>clic de 150 ms · espera de calma<br/>mín. 700 ms, 400 ms quieta, tope 5 s"]
+    P["Pantalla · cliente RFB<br/>clic de 150 ms · espera de calma<br/>mín. 1200 ms, 400 ms quieta, tope 5 s"]
     O["Captura posterior<br/>+ segundos que quedan"]
     REP["reportar<br/>reporte.json · cierra VNC<br/>bloquea lo que siga"]
     CUT["Corte del ejecutor<br/>plazo · tope de costo<br/>otra tarea en el escritorio · pi caído"]
@@ -171,7 +171,7 @@ sequenceDiagram
     EJE->>EJE: armar el resumen con la respuesta primero, ocultar secretos
     EJE-->>SRV: desenlace
     SRV->>SRV: ocultar secretos otra vez, guardar y publicar
-    Note over SRV: respaldo si el ejecutor no devuelve<br/>pedir parar a plazo + 5 s, publicar fallida a plazo + 10 s
+    Note over SRV: respaldo si el ejecutor no devuelve<br/>pedir parar a plazo + TASK_GRACE_MS/2<br/>publicar fallida a plazo + TASK_GRACE_MS (8 s en Railway)
     EV->>SRV: GET /tasks/task_id
     SRV-->>EV: terminada o fallida + resumen
     SRV-)MEM: actualizar las notas de la app, en serie
@@ -181,13 +181,13 @@ Imagen: [img/2-secuencia.png](img/2-secuencia.png).
 
 ## 3. Límites de confianza
 
-| Límite                       | Qué lo cruza                                                                                                                                                                            | Regla                                                                                                                                                                                                                                                                                                     |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Evaluador → servidor         | Tarea, URL y contraseña del escritorio                                                                                                                                                  | Bearer en `POST /tasks` y `GET /tasks/{id}`, comparado en tiempo constante; `/health` no lo exige y lo acepta si viene. Cuerpo de hasta 64 KB, validado. La contraseña entra a la lista de secretos apenas llega.                                                                                         |
-| Servidor → proceso de `pi`   | Tarea, URL y contraseña del escritorio, key de OpenRouter                                                                                                                               | Entorno mínimo y explícito: el token del equipo no pasa. La tarea va en el prompt y en una variable de entorno, de donde la lee el revisor; la URL y la contraseña, solo en variables de entorno. `pi` corre sin herramientas incorporadas, extensiones, skills ni archivos de contexto ajenos.           |
-| Proceso de `pi` → OpenRouter | Instrucciones, notas, tarea, capturas, ampliaciones y resultados de herramientas; al revisor, la tarea, la acción, lo que el agente dice haber comprobado, lo ya aprobado y una captura | La contraseña nunca. El host del escritorio solo aparece si falla la conexión, en el mensaje de error. Las capturas pueden mostrar datos del negocio.                                                                                                                                                     |
-| Herramientas ↔ escritorio    | Entradas de ratón y teclado; framebuffer                                                                                                                                                | Todo lo que vuelve son píxeles no confiables: información, nunca órdenes. Las escrituras pasan antes por el revisor.                                                                                                                                                                                      |
-| Proceso de `pi` → servidor   | `reporte.json` y la salida de error                                                                                                                                                     | El proceso ya está muerto cuando se publica. Resumen y errores se redactan dos veces, en el ejecutor y en el servidor.                                                                                                                                                                                    |
-| Servidor → notas por app     | Bitácora de la traza (sin valores tecleados ni opciones elegidas, con las razones del revisor) y el resumen final                                                                       | La consigna prohíbe datos de registros, resultados y coordenadas. El resumen y las razones del revisor pueden traer datos: no está garantizado que no pasen.                                                                                                                                              |
-| Contenedor → disco           | Estado de tareas, trazas (capturas, acciones, texto tecleado) y notas                                                                                                                   | Quedan en `DATA_DIR` dentro del contenedor; `data/` y `.env` quedan fuera de git y de la imagen.                                                                                                                                                                                                          |
-| Servidor → logs              | Una línea JSON por evento                                                                                                                                                               | Redactada. Las líneas de una tarea, con sus secretos (su contraseña, el token y la key); las demás, con todos los conocidos, incluidas las contraseñas de escritorios recibidas antes. Los errores de las notas por app salen por la salida de error, sin redactar, con el nombre de la app y el mensaje. |
+| Límite                       | Qué lo cruza                                                                                                                                                              | Regla                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evaluador → servidor         | Tarea, URL y contraseña del escritorio                                                                                                                                    | Bearer en `POST /tasks` y `GET /tasks/{id}`, comparado en tiempo constante; `/health` no lo exige y lo acepta si viene. Cuerpo de hasta 64 KB, validado. La contraseña entra a la lista de secretos apenas llega.                                                                                         |
+| Servidor → proceso de `pi`   | Tarea, URL y contraseña del escritorio, key de OpenRouter                                                                                                                 | Entorno mínimo y explícito: el token del equipo no pasa. La tarea va en el prompt y en una variable de entorno, de donde la lee el revisor; la URL y la contraseña, solo en variables de entorno. `pi` corre sin herramientas incorporadas, extensiones, skills ni archivos de contexto ajenos.           |
+| Proceso de `pi` → OpenRouter | Instrucciones, notas, tarea, capturas y resultados de herramientas; al revisor, la tarea, la acción, lo que el agente dice haber comprobado, lo ya aprobado y una captura | La contraseña nunca. El host del escritorio solo aparece si falla la conexión, en el mensaje de error. Las capturas pueden mostrar datos del negocio.                                                                                                                                                     |
+| Herramientas ↔ escritorio    | Entradas de ratón y teclado; framebuffer                                                                                                                                  | Todo lo que vuelve son píxeles no confiables: información, nunca órdenes. Las escrituras pasan antes por el revisor.                                                                                                                                                                                      |
+| Proceso de `pi` → servidor   | `reporte.json` y la salida de error                                                                                                                                       | El proceso ya está muerto cuando se publica. Resumen y errores se redactan dos veces, en el ejecutor y en el servidor.                                                                                                                                                                                    |
+| Servidor → notas por app     | Bitácora de la traza (sin valores tecleados ni opciones elegidas, con las razones del revisor) y el resumen final                                                         | La consigna prohíbe datos de registros, resultados y coordenadas. El resumen y las razones del revisor pueden traer datos: no está garantizado que no pasen.                                                                                                                                              |
+| Contenedor → volumen `/data` | Estado de tareas, trazas (capturas, acciones, texto tecleado) y notas                                                                                                     | Quedan en `DATA_DIR`, un volumen de Railway montado en `/data`. `scripts/bajar-datos.sh` las baja a `data/railway/` en la máquina local, sin capturas salvo con `CON_CAPTURAS=1`; `data/` y `.env` quedan fuera de git y de la imagen.                                                                    |
+| Servidor → logs              | Una línea JSON por evento                                                                                                                                                 | Redactada. Las líneas de una tarea, con sus secretos (su contraseña, el token y la key); las demás, con todos los conocidos, incluidas las contraseñas de escritorios recibidas antes. Los errores de las notas por app salen por la salida de error, sin redactar, con el nombre de la app y el mensaje. |

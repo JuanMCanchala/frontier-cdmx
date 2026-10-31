@@ -2,6 +2,16 @@
 
 Key del evento: $45 sin recarga. Una fila por corrida que gasta.
 
+## Set oculto
+
+| Corrida | Hora (CDMX) | Resultado | Tareas | Costo del agente (pi) | Baja del saldo | Mediana | Máximo |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 13:53 | **34 / 34** (fáciles 10/10, regulares 14/14, difíciles 10/10) | 28 terminadas, 6 fallidas a propósito | $3.58 | $3.67 | 51 s | 177 s |
+
+La plataforma reporta la corrida 1 como el 60 % del set. Saldo después: $40.54.
+
+## Práctica
+
 | Fecha (UTC) | Qué | Modelo | Costo (pi) |
 | --- | --- | --- | --- |
 | 2026-10-31T18:15:39.671Z | E2-direccion-con-nota.json (pasa, 50s) | anthropic/claude-sonnet-5.5 (high) | $0.0691 |
@@ -19,11 +29,3 @@ Key del evento: $45 sin recarga. Una fila por corrida que gasta.
 | 2026-10-31T19:08:26Z | E5 por el contrato HTTP en Railway (pasa, 32s) | anthropic/claude-sonnet-5.5 (high) | $0.0414 |
 
 Banco por el contrato HTTP en Railway: 5 de 5, POST entre 281 y 294 ms. Saldo después: $44.22.
-
-## Set oculto
-
-| Corrida | Hora (CDMX) | Resultado | Tareas | Costo del agente (pi) | Baja del saldo | Mediana | Máximo |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 13:53 | **34 / 34** (fáciles 10/10, regulares 14/14, difíciles 10/10) | 28 terminadas, 6 fallidas a propósito | $3.58 | $3.67 | 51 s | 177 s |
-
-La plataforma reporta la corrida 1 como el 60 % del set. Saldo después: $40.54.

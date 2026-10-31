@@ -107,7 +107,7 @@ Las notas viven en `<carpetaDatos>/notas-apps/<app>.md`.
 
 ## Herramientas que ve el modelo
 
-`ver_pantalla`, `ampliar`, `pulsar` (con `intencion` navegar | editar | guardar y `verificado`),
+`ver_pantalla`, `pulsar` (con `intencion` navegar | editar | guardar y `verificado`),
 `escribir`, `llenar`, `elegir`, `teclas`, `desplazar` y `reportar`. Todo `pulsar` con intención
 `guardar` o con un verbo de escritura en el rótulo, y todo Enter, pasa antes por el revisor.
 

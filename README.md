@@ -10,7 +10,7 @@ la empresa.
 | --- | --- |
 | 1 | **34 / 34** · fáciles 10/10, regulares 14/14, difíciles 10/10 · mediana 1 min |
 
-Banco de práctica por el contrato HTTP en Railway: 5 de 5. El gasto de cada corrida está en `eval/gasto.md`.
+Banco de práctica por el contrato HTTP en Railway: 5 de 5. Tras el cambio de tema de la app (incidente FR-0153): 5 de 5 sin cambiar el código; detalle en [`docs/incidente-FR-0153.md`](docs/incidente-FR-0153.md). El gasto de cada corrida está en `eval/gasto.md`.
 
 ## Cómo funciona
 

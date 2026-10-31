@@ -6,6 +6,7 @@ import { basename } from "node:path";
 import { ejecutarTarea } from "../src/operador/ejecutor.ts";
 import { aprenderDeTarea, pistasDeApps } from "../src/operador/memoria.ts";
 import { juzgarEscritorio, reiniciarEscritorio, urlVncPruebas } from "./escritorio-pruebas.ts";
+import { juzgar } from "./juicio.ts";
 
 const archivo = process.argv[2];
 if (!archivo) throw new Error("uso: probar.ts <prueba.json>");
@@ -37,18 +38,7 @@ const d = await ejecutarTarea(`${prueba.id}-${t}`, { tarea: prueba.instruccion, 
 const segundos = Math.round((Date.now() - t) / 1000);
 const juicio = await juzgarEscritorio(prueba);
 
-const fallas: string[] = [];
-if (!juicio.pass) fallas.push(`app: ${juicio.checks.filter((c: any) => !c.ok).map((c: any) => c.nombre).join(", ")}`);
-if (d.estado !== prueba.estado_esperado) fallas.push(`estado ${d.estado}, se esperaba ${prueba.estado_esperado}`);
-const linea = d.resumen.split("\n").find((l) => /^respuesta:/i.test(l));
-if (prueba.respuesta_esperada !== undefined) {
-  const esperada = String(prueba.respuesta_esperada);
-  const numero = linea?.match(/-?\d+(?:[.,]\d+)?/)?.[0];
-  const ok = /^-?\d/.test(esperada) ? numero?.replace(",", ".") === esperada.replace(",", ".") : linea?.toLowerCase().includes(esperada.toLowerCase());
-  if (!ok) fallas.push(`respuesta "${linea ?? "(sin línea)"}", se esperaba ${esperada}`);
-}
-for (const c of prueba.claves_razon ?? []) if (!d.resumen.includes(c)) fallas.push(`el resumen no nombra ${c}`);
-
+const fallas = juzgar(prueba, d.estado, d.resumen, juicio);
 const pasa = fallas.length === 0;
 console.log(JSON.stringify({ prueba: prueba.id, pasa, fallas, segundos, costoUsd: Number(d.costoUsd.toFixed(4)), motivo: d.motivo, estado: d.estado, resumen: d.resumen, traza: d.carpetaTraza }, null, 2));
 appendFileSync("eval/gasto.md", `| ${new Date().toISOString()} | ${basename(archivo)} (${pasa ? "pasa" : "falla"}, ${segundos}s) | ${modelo} (${razonamiento}) | $${d.costoUsd.toFixed(4)} |\n`);

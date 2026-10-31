@@ -730,6 +730,31 @@ test("loadConfig aplica los valores por defecto y exige TEAM_TOKEN y OPENROUTER_
   );
 });
 
+test("guardProcess: un error no capturado del agente no tumba el servidor y se registra sin secretos", () => {
+  const server = new URL("./server.ts", import.meta.url).href;
+  const script = `
+    import { guardProcess } from ${JSON.stringify(server)};
+    guardProcess((line) => console.log(line), () => [${JSON.stringify(PASSWORD)}]);
+    setTimeout(() => { throw new Error("se rompió con ${PASSWORD}"); }, 0);
+    Promise.reject(new Error("rechazo con ${PASSWORD}"));
+    setTimeout(() => console.log("sigue-vivo"), 50);
+  `;
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const lines = r.stdout.trim().split("\n");
+  assert.equal(lines.at(-1), "sigue-vivo");
+  const events = lines.slice(0, -1).map((l) => JSON.parse(l));
+  assert.deepEqual(events.map((e) => e.evento).sort(), [
+    "error_no_capturado",
+    "rechazo_no_capturado",
+  ]);
+  assert.ok(!r.stdout.includes(PASSWORD));
+  assert.ok(events.every((e) => e.error.includes("[oculto]")));
+});
+
 test("los logs generales ocultan también las contraseñas de escritorio recibidas", async (t) => {
   let release!: () => void;
   const gate = new Promise<void>((r) => (release = r));

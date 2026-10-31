@@ -828,6 +828,36 @@ export function createApp(deps: AppDeps): App {
 
 // ── Arranque real ────────────────────────────────────────────────────────────
 
+/**
+ * Un error no capturado del agente (un evento "error" sin listener, una promesa rechazada suelta)
+ * tumbaría el proceso con todas las tareas en curso, y Railway solo reintenta unas veces. Se
+ * registra redactado y el servidor sigue: el respaldo de cada tarea igual la cierra a tiempo.
+ */
+export function guardProcess(
+  write: (line: string) => void,
+  knownSecrets: () => readonly string[],
+): void {
+  const report = (evento: string) => (e: unknown) => {
+    try {
+      const secrets = knownSecrets();
+      write(
+        redact(
+          JSON.stringify({
+            t: new Date().toISOString(),
+            evento,
+            error: shortError(e, secrets),
+          }),
+          secrets,
+        ),
+      );
+    } catch {
+      // Ni el registro puede tumbar el proceso.
+    }
+  };
+  process.on("uncaughtException", report("error_no_capturado"));
+  process.on("unhandledRejection", report("rechazo_no_capturado"));
+}
+
 async function main(): Promise<void> {
   let config: Config;
   try {
@@ -844,6 +874,13 @@ async function main(): Promise<void> {
     runner: runTask,
     manualText: manualsForPrompt,
     updateManual,
+  });
+  const secrets = [config.teamToken, config.openrouterKey];
+  guardProcess((line) => process.stdout.write(`${line}\n`), app.knownSecrets);
+  // Con la guardia puesta, un fallo al escuchar (puerto ocupado) dejaría el proceso vivo y sordo.
+  app.server.once("error", (e) => {
+    console.error(`No arranca el servidor: ${shortError(e, secrets)}.`);
+    process.exit(1);
   });
   app.server.listen(config.port, () => {
     console.log(

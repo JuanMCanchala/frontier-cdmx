@@ -26,7 +26,7 @@ import {
   type App,
   type AppDeps,
   type Config,
-} from "./server.ts";
+} from "./servidor.ts";
 
 const TOKEN = "token-equipo-123";
 const OR_KEY = "sk-or-falsa-456";
@@ -785,7 +785,7 @@ test("loadConfig aplica los valores por defecto y exige TEAM_TOKEN y OPENROUTER_
 });
 
 test("guardProcess: un error no capturado del agente no tumba el servidor y se registra sin secretos", () => {
-  const server = new URL("./server.ts", import.meta.url).href;
+  const server = new URL("./servidor.ts", import.meta.url).href;
   const script = `
     import { guardProcess } from ${JSON.stringify(server)};
     guardProcess((line) => console.log(line), () => [${JSON.stringify(PASSWORD)}]);
@@ -843,7 +843,7 @@ test("arrancar como main sin TEAM_TOKEN ni OPENROUTER_API_KEY termina con un err
   };
   delete env.TEAM_TOKEN;
   delete env.OPENROUTER_API_KEY;
-  const server = fileURLToPath(new URL("./server.ts", import.meta.url));
+  const server = fileURLToPath(new URL("./servidor.ts", import.meta.url));
   const r = spawnSync(process.execPath, [server], {
     env,
     encoding: "utf8",

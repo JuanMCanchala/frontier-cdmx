@@ -28,4 +28,4 @@ ENV NODE_ENV=production \
     GUARD_MODEL=anthropic/claude-haiku-5.5 \
     AGENT_THINKING=high
 EXPOSE 8080
-CMD ["node", "--openssl-legacy-provider", "src/server.ts"]
+CMD ["node", "--openssl-legacy-provider", "src/servidor.ts"]

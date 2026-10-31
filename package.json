@@ -4,7 +4,7 @@
   "type": "module",
   "engines": { "node": ">=24" },
   "scripts": {
-    "start": "node --openssl-legacy-provider src/server.ts",
+    "start": "node --openssl-legacy-provider src/servidor.ts",
     "test": "node --openssl-legacy-provider --test 'src/**/*.test.ts'"
   }
 }

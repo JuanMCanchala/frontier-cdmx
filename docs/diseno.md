@@ -55,7 +55,7 @@ El diseño de referencia es [cuisangelo/frontier-screen-agent](https://github.co
 | Control de escrituras | Negar por defecto: clasificador, compuerta con lista blanca, detector de efectos | Revisor que frena solo contradicciones visibles                                   |
 | Resumen               | Código determinista desde datos estructurados                                    | El modelo redacta; el código pone la línea `respuesta:` primero y oculta secretos |
 | Lenguaje y estado     | Python, FastAPI, SQLite                                                          | TypeScript en Node 24 sin dependencias, JSON por tarea                            |
-| Set oculto            | A media tarde                                                                    | Plan: apenas pase el primer caso. **Pendiente:** sin corrida registrada           |
+| Set oculto            | A media tarde                                                                    | Corrida 1 a las 13:53 CDMX, antes de la entrega: **34/34**                         |
 
 Lo que se conserva de Aprendiz: cliente RFB propio con clic de 150 ms, cerrar antes de publicar, una tarea a la vez por escritorio, memoria por app sin datos del negocio ni coordenadas, y filtro de secretos exactos sin borrar cadenas genéricas.
 
@@ -65,9 +65,9 @@ Lo que se conserva de Aprendiz: cliente RFB propio con clic de 150 ms, cerrar an
 
 | #   | Objetivo                                        | Medida                                                                                                                                                                                                                                             |
 | --- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| O1  | Resolver tareas en una app que no conoce        | Set oculto. **Pendiente:** sin corrida registrada                                                                                                                                                                                                  |
+| O1  | Resolver tareas en una app que no conoce        | Set oculto, corrida 1: **34/34** (fáciles 10/10, regulares 14/14, difíciles 10/10), el 60 % del set según la plataforma; mediana 51 s y máximo 177 s en nuestros logs |
 | O2  | Cero falsos éxitos y cero acciones destructivas | Meta, no garantía. En las corridas de práctica registradas (5 locales, 5 por el contrato HTTP en Railway y dos E2 sueltas en Railway): ninguno (todas pasan `/__check`, que incluye "sin acciones fuera de la tarea")                              |
-| O3  | No negar de más                                 | Que ningún freno del revisor detenga una acción que la pantalla sostenía. Se revisa en las trazas del set oculto (pendiente)                                                                                                                       |
+| O3  | No negar de más                                 | Que ningún freno del revisor detenga una acción que la pantalla sostenía. En la corrida 1 ninguna tarea falló; falta contar los frenos del revisor en sus trazas                                                                                                                       |
 | O4  | Cerrar dentro del plazo                         | Corte del agente a los 285 s desde el POST y publicación de respaldo a los 295 s (293 s en Railway, con `TASK_GRACE_MS=8000`), antes de los 300 s del evaluador. En práctica: 25–60 s por tarea en local y 32–80 s por el contrato HTTP en Railway |
 | O5  | Costo acotado                                   | Tope duro de 0.50 USD por tarea. En práctica: 0.037–0.083 USD por tarea (solo el bucle principal; ver 6.6)                                                                                                                                         |
 | O6  | `POST /tasks` en menos de 2 s                   | Responde antes de lanzar el agente. En Railway: 279 ms en la primera corrida y entre 281 y 294 ms en el banco de 5                                                                                                                                 |
@@ -406,14 +406,14 @@ Detalle por límite en [arquitectura.md](arquitectura.md#3-límites-de-confianza
 
 **Contrato HTTP en el despliegue** (`scripts/probar-remoto.ts`): `/__reset` → `POST /tasks` al agente desplegado → consulta cada 5 s, como el evaluador → `/__check` y las mismas reglas del banco (`scripts/juicio.ts`). Imprime cuánto tardó el POST y el total; no escribe en `eval/gasto.md`, así que esas filas se anotan aparte. `scripts/bajar-datos.sh` baja del volumen `/data` las tareas, trazas y notas para revisar la corrida.
 
-**Set oculto** (hasta tres corridas por equipo desde `/evento`). Lección de octubre: correrlo apenas pase el primer caso de práctica, no al final. **Pendiente:** no hay corrida registrada en el repo.
+**Set oculto** (hasta tres corridas por equipo desde `/evento`). Lección de octubre: correrlo apenas pase el primer caso de práctica, no al final. Corrida 1 (13:53 CDMX): **34/34**, con 28 tareas terminadas y 6 fallidas a propósito, $3.67 en total; detalle en [eval/gasto.md](../eval/gasto.md).
 
 **Qué miramos.** En `DATA_DIR/tasks/<id>.json` y en la línea de log de la tarea, el motivo de cierre (`stopReason`: `reporto`, `sin_tiempo`, `proceso_caido`, `abortada` o `sin_presupuesto` desde el ejecutor; `tiempo`, `cancelada`, `error_interno` o `reinicio` desde el servidor). En la traza (`DATA_DIR/trazas/<id>/`), los pasos por tarea y cada freno del revisor con su razón. Con ambos, si cada falla fue daño, error del agente o negación propia. Esa última separación es la que en octubre llegó tarde.
 
 **Pendiente de medir:**
 
 - Qué commit corrió el banco de Railway; si no era la versión alineada, repetirlo anotando el commit desplegado.
-- Resultado en el set oculto, por dificultad y por tipo de falla.
+- El 40 % del set oculto que la corrida 1 no cubrió, y el tipo de falla si aparece alguna.
 - Costo y latencia del revisor, y costo de las notas.
 - p95 de tiempo y costo, y consistencia entre corridas de la misma tarea.
 - Efecto de las notas por app (con y sin `MEMORIA=1`).

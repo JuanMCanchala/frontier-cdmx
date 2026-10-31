@@ -20,6 +20,14 @@ la empresa.
 Diseño inspirado en el agente de [cuisangelo/frontier-screen-agent](https://github.com/cuisangelo/frontier-screen-agent),
 con implementación propia.
 
+## Diseño
+
+- [Documento de diseño](docs/diseno.md): problema, decisiones (ADR), revisor, memoria, presupuesto de
+  tiempo y costo, seguridad, riesgos, cómo medimos y por qué cambiamos respecto al diseño Aprendiz.
+- [Diagramas de arquitectura](docs/arquitectura.md): contenedores y límites de confianza, ciclo de
+  una tarea y secuencia desde `POST /tasks` hasta publicar.
+- [Contratos entre módulos](docs/contratos.md).
+
 ## Correrlo en local
 
 Requisitos: Node 24 o más nuevo y `pi` (`pnpm add -g @earendil-works/pi-coding-agent@1.1.0`).

@@ -730,6 +730,32 @@ test("loadConfig aplica los valores por defecto y exige TEAM_TOKEN y OPENROUTER_
   );
 });
 
+test("los logs generales ocultan también las contraseñas de escritorio recibidas", async (t) => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  const h = await start(
+    t,
+    {},
+    {
+      updateManual: async () => {
+        await gate;
+        throw new Error(`la traza menciona ${PASSWORD}`);
+      },
+    },
+  );
+  assert.deepEqual(new Set(h.app.knownSecrets()), new Set([TOKEN, OR_KEY]));
+  const id = await h.post("A");
+  assert.ok(h.app.knownSecrets().includes(PASSWORD));
+  await waitFor(() => h.calls.length === 1);
+  h.calls[0].resolve(result({ app: "AppDemo" }));
+  await waitFor(async () => (await h.get(id)).estado === "terminada");
+  release();
+  await h.app.idle();
+  const err = h.logs.find((l) => JSON.parse(l).evento === "manual_error");
+  assert.ok(err);
+  assert.ok(!err.includes(PASSWORD), err);
+});
+
 test("arrancar como main sin TEAM_TOKEN ni OPENROUTER_API_KEY termina con un error claro", () => {
   const env: Record<string, string | undefined> = {
     ...process.env,

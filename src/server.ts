@@ -75,6 +75,8 @@ export type App = {
   close(): Promise<void>;
   /** Aborta las tareas en marcha, espera a que se detengan (con tope) y cierra el servidor. */
   shutdown(reason: string, waitMs?: number): Promise<void>;
+  /** Token, key y contraseñas de escritorio recibidas: lo que ningún log puede mostrar. */
+  knownSecrets(): string[];
 };
 
 type Estado = "en_curso" | "terminada" | "fallida";
@@ -326,11 +328,14 @@ type Slot = { ctl: AbortController; done: Promise<void> };
 export function createApp(deps: AppDeps): App {
   const { config } = deps;
   const globalSecrets = [config.teamToken, config.openrouterKey];
+  // Un error del agente o del manual puede traer la contraseña de cualquier escritorio recibido.
+  const known = new Set<string>(globalSecrets);
+  const knownSecrets = () => [...known];
   const write =
     deps.log ?? ((line: string) => process.stdout.write(`${line}\n`));
   const log = (
     entry: Record<string, unknown>,
-    secrets: readonly string[] = globalSecrets,
+    secrets: readonly string[] = knownSecrets(),
   ) =>
     write(
       redact(
@@ -358,7 +363,7 @@ export function createApp(deps: AppDeps): App {
       log({
         evento: "error_guardando",
         id: rec.id,
-        error: shortError(e, globalSecrets),
+        error: shortError(e, knownSecrets()),
       });
     }
   }
@@ -385,7 +390,7 @@ export function createApp(deps: AppDeps): App {
       log({
         evento: "tarea_ilegible",
         archivo: name,
-        error: shortError(e, globalSecrets),
+        error: shortError(e, knownSecrets()),
       });
       continue;
     }
@@ -466,7 +471,7 @@ export function createApp(deps: AppDeps): App {
         log({
           evento: "manual_error",
           app,
-          error: shortError(e, globalSecrets),
+          error: shortError(e, knownSecrets()),
         }),
       );
   }
@@ -527,7 +532,7 @@ export function createApp(deps: AppDeps): App {
     try {
       manual = deps.manualText(config.dataDir);
     } catch (e) {
-      log({ evento: "manual_ilegible", error: shortError(e, globalSecrets) });
+      log({ evento: "manual_ilegible", error: shortError(e, knownSecrets()) });
     }
 
     let result: TaskResult;
@@ -697,6 +702,7 @@ export function createApp(deps: AppDeps): App {
     if (!parsed.ok) return send(res, 400, { error: parsed.error });
 
     const { tarea, url, password } = parsed.value;
+    if (password) known.add(password);
     const secrets = [password, ...globalSecrets];
     const rec: TaskRecord = {
       id: randomUUID(),
@@ -782,7 +788,7 @@ export function createApp(deps: AppDeps): App {
       log({
         evento: "error_http",
         ruta: req.url ?? "",
-        error: shortError(e, globalSecrets),
+        error: shortError(e, knownSecrets()),
       });
       if (!res.headersSent) send(res, 500, { error: "error interno" });
       else res.destroy();
@@ -817,7 +823,7 @@ export function createApp(deps: AppDeps): App {
     await close();
   }
 
-  return { server, idle, close, shutdown };
+  return { server, idle, close, shutdown, knownSecrets };
 }
 
 // ── Arranque real ────────────────────────────────────────────────────────────

@@ -537,7 +537,11 @@ test("las rutas aceptan barras repetidas o finales (entrypoint registrado con '/
   const h = await start(t);
   const body = { tarea: "x", escritorio: { url: DESK_A, password: PASSWORD } };
   for (const path of ["//tasks", "/tasks/", "//tasks/"]) {
-    const r = await h.api(path, { body });
+    // Un escritorio distinto por tarea: ninguna queda esperando a otra.
+    const url = `wss://${path.replace(/\W/g, "x")}.example/websockify`;
+    const r = await h.api(path, {
+      body: { ...body, escritorio: { url, password: PASSWORD } },
+    });
     assert.equal(r.status, 200, path);
     assert.match(r.json.task_id, /^[0-9a-f-]{36}$/);
   }

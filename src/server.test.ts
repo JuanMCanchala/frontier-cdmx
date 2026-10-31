@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -523,6 +525,46 @@ test("las tareas se guardan en disco y las que quedaron en curso pasan a fallida
   assert.equal(rewritten.estado, "fallida");
   assert.equal(rewritten.stopReason, "reinicio");
   assert.equal(second.calls.length, 0);
+});
+
+test("un archivo de tarea corrupto o sin forma de tarea no tumba el arranque", async (t) => {
+  const dataDir = mkdtempSync(join(tmpdir(), "cdmx-servidor-"));
+  t.after(() => rmSync(dataDir, { recursive: true, force: true }));
+  const dir = join(dataDir, "tasks");
+  mkdirSync(dir, { recursive: true });
+  const bad = {
+    nulo: "null",
+    lista: "[]",
+    numero: "5",
+    texto: '"hola"',
+    vacio: "{}",
+    "estado-raro": '{"estado":"otro","resumen":"x"}',
+    cortado: '{"estado":"termi',
+  };
+  for (const [id, body] of Object.entries(bad))
+    writeFileSync(join(dir, `${id}.json`), body);
+  writeFileSync(
+    join(dir, "buena.json"),
+    JSON.stringify({ estado: "terminada", resumen: "respuesta: 7" }),
+  );
+  writeFileSync(join(dir, "sin-resumen.json"), '{"estado":"terminada"}');
+
+  const h = await start(t, { dataDir });
+  assert.deepEqual(await h.get("buena"), {
+    estado: "terminada",
+    resumen: "respuesta: 7",
+  });
+  assert.deepEqual(await h.get("sin-resumen"), {
+    estado: "terminada",
+    resumen: "",
+  });
+  for (const id of Object.keys(bad))
+    assert.equal((await h.api(`/tasks/${id}`)).status, 404, id);
+  const unreadable = h.logs
+    .map((l) => JSON.parse(l))
+    .filter((l) => l.evento === "tarea_ilegible");
+  assert.equal(unreadable.length, Object.keys(bad).length);
+  assert.equal((await h.api("/health")).status, 200);
 });
 
 test("404 para un task_id que no existe y para rutas desconocidas", async (t) => {

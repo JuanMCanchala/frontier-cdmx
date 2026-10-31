@@ -75,6 +75,7 @@ export type App = {
 };
 
 type Estado = "en_curso" | "terminada" | "fallida";
+const ESTADOS: ReadonlySet<Estado> = new Set(["en_curso", "terminada", "fallida"]);
 
 type TaskRecord = {
   id: string;
@@ -347,9 +348,15 @@ export function createApp(deps: AppDeps): App {
     if (!name.endsWith(".json")) continue;
     let rec: TaskRecord;
     try {
-      rec = JSON.parse(
+      const raw: unknown = JSON.parse(
         readFileSync(join(tasksDir, name), "utf8"),
-      ) as TaskRecord;
+      );
+      // Un archivo con JSON válido pero sin forma de tarea (null, [], {}) no puede tumbar el
+      // arranque ni hacer que GET responda sin "estado" o "resumen".
+      if (!isObject(raw) || !ESTADOS.has(raw.estado as Estado))
+        throw new Error("no tiene la forma de una tarea");
+      rec = raw as TaskRecord;
+      if (typeof rec.resumen !== "string") rec.resumen = "";
     } catch (e) {
       log({
         evento: "tarea_ilegible",

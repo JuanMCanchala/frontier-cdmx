@@ -4,6 +4,14 @@ Agente para el reto Frontier CDMX: recibe una tarea en lenguaje natural y la eje
 aplicación de escritorio que no tiene API, viéndola solo por VNC, como lo haría una persona nueva en
 la empresa.
 
+## Resultados
+
+| Corrida del set oculto (app nunca vista) | Puntaje |
+| --- | --- |
+| 1 | **34 / 34** · fáciles 10/10, regulares 14/14, difíciles 10/10 · mediana 1 min |
+
+Banco de práctica por el contrato HTTP en Railway: 5 de 5. El gasto de cada corrida está en `eval/gasto.md`.
+
 ## Cómo funciona
 
 1. **Servidor** (`src/servidor.ts`): implementa el contrato del reto y lanza un proceso de `pi` por

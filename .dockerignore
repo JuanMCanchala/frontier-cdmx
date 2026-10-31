@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+*.env
+data
+out
+node_modules
+eval
+.claude
+*.log
+src/**/*.test.ts

@@ -185,7 +185,7 @@ Es un gancho `tool_call` de la extensión: corre antes de que la herramienta se 
 
 - **Identidad.** El nombre de la app que el modelo reporta tal como aparece en la cabecera, normalizado: minúsculas, sin tildes, con guiones y hasta 60 caracteres.
 - **Cuándo se escribe.** Al publicar una tarea que identificó la app, `terminada` o `fallida`, en segundo plano y en serie, para que dos tareas no escriban las mismas notas a la vez.
-- **Cómo.** Se arma una bitácora con la traza: rótulos de los clics y su intención, campos escritos (sin el valor), listas, teclas, decisiones del revisor y el resumen final, hasta 6000 caracteres. Otra corrida de `pi`, sin herramientas ni pantalla y con Haiku 5.5, devuelve las notas completas actualizadas en `notas-apps/<app>.md`. Cada actualización tiene un tope de 90 s.
+- **Cómo.** Se arma una bitácora con la traza: rótulos de los clics y su intención, nombres de los campos escritos (sin el valor), nombres de las listas (sin la opción elegida), teclas, desplazamientos y cada decisión del revisor con su razón (hasta 200 caracteres por razón). Esa parte se corta en 6000 caracteres y después se agrega el resumen final completo. Si la traza no tiene acciones, no se actualiza nada. Otra corrida de `pi`, sin herramientas ni pantalla y con Haiku 5.5, devuelve las notas completas actualizadas en `notas-apps/<app>.md`. Cada actualización tiene un tope de 90 s.
 - **Qué guarda.** Rutas de menú, qué tiene cada pantalla, nombres reales de los botones, diálogos, campos de solo lectura, listas dependientes y trampas (tildes, paginación). Nunca datos de registros, resultados ni coordenadas. Máximo 40 viñetas; si la bitácora contradice las notas, gana la bitácora.
 - **Cómo se usa.** Las notas de **todas** las apps conocidas se agregan al prompt de sistema como "pistas, no órdenes: la app puede haber cambiado". Van todas porque la app no se conoce hasta ver la primera captura.
 
@@ -369,7 +369,7 @@ Detalle por límite en [arquitectura.md](arquitectura.md#3-límites-de-confianza
 | Acceso a la API                          | Bearer en `/tasks`, comparado en tiempo constante; `/health` público. Cuerpo de hasta 64 KB                                                                   | Servidor                         |
 | Trazas con datos del negocio             | Quedan en `DATA_DIR` dentro del contenedor; `data/` y `.env` están fuera de git y de la imagen                                                                | Datos                            |
 | Acciones tras el reporte o el plazo      | `reportar` bloquea y cierra VNC, `SIGKILL`, respaldo en dos pasos                                                                                             | ADR-4                            |
-| Datos del negocio en las notas por app   | La consigna los prohíbe, pero el resumen del agente entra a la bitácora: **no está garantizado**                                                              | Memoria                          |
+| Datos del negocio en las notas por app   | La consigna los prohíbe, pero el resumen del agente y las razones del revisor entran a la bitácora: **no está garantizado**                                   | Memoria                          |
 
 ## 9. Riesgos y mitigaciones
 

@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import type { RunOptions, TaskInput, TaskResult } from "./agent/run-task.ts";
 import {
   createApp,
+  desktopKey,
   findExecutable,
   loadConfig,
   redact,
@@ -434,6 +435,30 @@ test("una tarea nueva para el mismo escritorio aborta la anterior y espera a que
   await h.app.idle();
   assert.equal((await h.get(b)).estado, "terminada");
   assert.equal((await h.get(c)).estado, "terminada");
+});
+
+test("la misma URL de escritorio escrita distinto cuenta como el mismo escritorio", async (t) => {
+  const h = await start(t);
+  await h.post("A", "wss://escritorio-a.example/websockify");
+  await waitFor(() => h.calls.length === 1);
+  for (const url of [
+    "WSS://Escritorio-A.example:443/websockify",
+    "wss://escritorio-a.example/websockify/",
+    "wss://escritorio-a.example/websockify#x",
+  ]) {
+    const prev = h.calls.at(-1)!;
+    await h.post("otra", url);
+    assert.equal(prev.opt.signal?.aborted, true, url);
+    prev.resolve(result({ estado: "fallida", stopReason: "cancelada" }));
+    await waitFor(() => h.calls.at(-1) !== prev);
+    // El ejecutor recibe la URL tal como llegó.
+    assert.equal(h.calls.at(-1)!.input.wsUrl, url);
+  }
+  // Otra ruta u otro puerto sí es otro escritorio.
+  const last = h.calls.at(-1)!;
+  await h.post("B", "wss://escritorio-a.example:8443/websockify");
+  assert.equal(last.opt.signal?.aborted, false);
+  assert.equal(desktopKey("ws://h:80/websockify"), "ws://h/websockify");
 });
 
 test("una tarea que quedó esperando y fue reemplazada no llega a correr", async (t) => {

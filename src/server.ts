@@ -220,6 +220,21 @@ export function validateTaskBody(
   };
 }
 
+/**
+ * Clave del escritorio para "una tarea a la vez por escritorio": la misma URL escrita distinto
+ * (host en mayúsculas, puerto por defecto, barra final, #fragmento) es el mismo escritorio.
+ */
+export function desktopKey(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    u.pathname = u.pathname.replace(/\/+$/, "") || "/";
+    return u.href;
+  } catch {
+    return url;
+  }
+}
+
 function validWsUrl(url: string): boolean {
   if (!/^wss?:\/\//i.test(url)) return false;
   try {
@@ -616,8 +631,9 @@ export function createApp(deps: AppDeps): App {
     const ctl = new AbortController();
     const { promise: done, resolve: markDone } = Promise.withResolvers<void>();
     const slot: Slot = { ctl, done };
-    const prev = desktops.get(input.wsUrl);
-    desktops.set(input.wsUrl, slot);
+    const key = desktopKey(input.wsUrl);
+    const prev = desktops.get(key);
+    desktops.set(key, slot);
     prev?.ctl.abort(SUPERSEDED);
 
     // Respaldo en dos pasos, para no reportar con el agente aún operando: primero se le pide parar
@@ -671,7 +687,7 @@ export function createApp(deps: AppDeps): App {
       .finally(() => {
         clearTimeout(stopper);
         clearTimeout(backup);
-        if (desktops.get(input.wsUrl) === slot) desktops.delete(input.wsUrl);
+        if (desktops.get(key) === slot) desktops.delete(key);
         markDone();
         active.delete(run);
       });

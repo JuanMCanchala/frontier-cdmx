@@ -11,8 +11,9 @@ la empresa.
 2. **Operador** (`src/operador/`): `pi` con Sonnet 5.5 decide cada paso sobre la captura del momento,
    con herramientas propias: `ver_pantalla`, `ampliar`, `pulsar`, `escribir`, `llenar`, `elegir`,
    `teclas`, `desplazar` y `reportar`.
-3. **Revisor** (Haiku 5.5): mira la pantalla antes de cada acción que puede cambiar datos y la frena
-   solo si la pantalla contradice la tarea.
+3. **Revisor** (Haiku 5.5): mira la pantalla antes de cada acción que reconoce como escritura (un clic
+   marcado como guardar o con un verbo de escritura en el rótulo, o un Enter) y la frena solo si la
+   pantalla contradice la tarea.
 4. **Notas por app** (`src/operador/memoria.ts`): al terminar una tarea se anotan rutas y botones de
    la interfaz, nunca datos ni coordenadas, y las tareas siguientes las reciben como pistas.
 5. **Escritorio** (`src/escritorio/`): cliente RFB 3.8 propio sobre WebSocket, sin dependencias.

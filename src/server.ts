@@ -99,6 +99,7 @@ type Outcome = {
 };
 
 const MAX_BODY_BYTES = 64 * 1024;
+const KEEP_ALIVE_MS = 65_000;
 const LOG_TASK_CHARS = 80;
 const HIDDEN = "[oculto]";
 const TASK_ID = /^[A-Za-z0-9-]{1,64}$/;
@@ -591,19 +592,22 @@ export function createApp(deps: AppDeps): App {
       left(config.deadlineMs + config.graceMs / 2),
     );
     stopper.unref();
-    const backup = setTimeout(() => {
-      finish(
-        rec,
-        {
-          estado: "fallida",
-          resumen: `No se terminó: ${TIMEOUT}.`,
-          stopReason: "tiempo",
-        },
-        secrets,
-        receivedAt,
-      );
-      ctl.abort(TIMEOUT);
-    }, left(config.deadlineMs + config.graceMs));
+    const backup = setTimeout(
+      () => {
+        finish(
+          rec,
+          {
+            estado: "fallida",
+            resumen: `No se terminó: ${TIMEOUT}.`,
+            stopReason: "tiempo",
+          },
+          secrets,
+          receivedAt,
+        );
+        ctl.abort(TIMEOUT);
+      },
+      left(config.deadlineMs + config.graceMs),
+    );
     backup.unref();
 
     const run: Promise<void> = execute(
@@ -747,6 +751,9 @@ export function createApp(deps: AppDeps): App {
     });
   });
   server.requestTimeout = 60_000;
+  // El evaluador consulta cada 5 s, justo el keepAliveTimeout por defecto de Node: el proxy de
+  // Railway reusaría una conexión que Node está cerrando y respondería 502. Más largo que el proxy.
+  server.keepAliveTimeout = KEEP_ALIVE_MS;
 
   async function idle(): Promise<void> {
     while (active.size) await Promise.all([...active]);

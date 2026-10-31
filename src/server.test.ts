@@ -188,6 +188,14 @@ test("GET /health responde 200 {ok:true} con o sin token", async (t) => {
   }
 });
 
+test("las conexiones keep-alive duran más que el sondeo de 5 s y que el proxy de Railway", async (t) => {
+  const h = await start(t);
+  assert.ok(
+    h.app.server.keepAliveTimeout > 60_000,
+    `keepAliveTimeout = ${h.app.server.keepAliveTimeout}`,
+  );
+});
+
 test("/tasks exige el token del equipo", async (t) => {
   const h = await start(t);
   const body = { tarea: "x", escritorio: { url: DESK_A, password: PASSWORD } };

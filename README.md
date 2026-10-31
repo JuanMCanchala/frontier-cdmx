@@ -7,10 +7,10 @@ la empresa.
 ## Cómo funciona
 
 1. **Servidor** (`src/servidor.ts`): implementa el contrato del reto y lanza un proceso de `pi` por
-   tarea, con plazo y tope de costo.
+   tarea, con plazo (285 s) y tope de costo (0.50 USD) por defecto.
 2. **Operador** (`src/operador/`): `pi` con Sonnet 5.5 decide cada paso sobre la captura del momento,
-   con herramientas propias: `ver_pantalla`, `ampliar`, `pulsar`, `escribir`, `llenar`, `elegir`,
-   `teclas`, `desplazar` y `reportar`.
+   con herramientas propias: `ver_pantalla`, `pulsar`, `escribir`, `llenar`, `elegir`, `teclas`,
+   `desplazar` y `reportar`.
 3. **Revisor** (Haiku 5.5): mira la pantalla antes de cada acción que reconoce como escritura (un clic
    marcado como guardar o con un verbo de escritura en el rótulo, o un Enter) y la frena solo si la
    pantalla contradice la tarea.
@@ -18,8 +18,11 @@ la empresa.
    la interfaz, nunca datos ni coordenadas, y las tareas siguientes las reciben como pistas.
 5. **Escritorio** (`src/escritorio/`): cliente RFB 3.8 propio sobre WebSocket, sin dependencias.
 
-Diseño inspirado en el agente de [cuisangelo/frontier-screen-agent](https://github.com/cuisangelo/frontier-screen-agent),
-con implementación propia.
+Diseño basado en el agente de [cuisangelo/frontier-screen-agent](https://github.com/cuisangelo/frontier-screen-agent),
+que sacó 51/56 en el set oculto de octubre. Para la primera corrida oficial, el comportamiento se
+alineó a propósito con esa versión: el procedimiento de las instrucciones, el revisor, el ritmo de
+pantalla, el plazo y el tope. Las mejoras propias, como ampliar una zona de la pantalla, quedan para
+después de medir ([diseño, sección 2](docs/diseno.md#2-por-qué-cambiamos-respecto-a-aprendiz)).
 
 ## Diseño
 

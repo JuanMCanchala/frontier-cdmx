@@ -25,8 +25,9 @@ Nunca incluyas datos de registros (nombres de personas, códigos, montos, fechas
 No anotes coordenadas ni posiciones en píxeles: solo nombres de menús, pantallas y botones, y su ubicación
 general (barra derecha, abajo). La app puede cambiar de diseño y las coordenadas quedarían viejas.
 En la primera línea anota la versión de la app que muestra la cabecera, si aparece. Si la bitácora muestra
-otra versión que la de las notas, revisa todas las notas contra lo nuevo. Si la bitácora contradice las
-notas, gana la bitácora. Máximo 40 líneas en viñetas, en español.
+otra versión que la de las notas, revisa todas las notas contra lo nuevo. Si la bitácora muestra que la app
+cambió de diseño (un aviso de novedades, botones o menús con otro nombre o en otro lugar), reescribe las notas
+desde cero con lo que muestra la bitácora. Si la bitácora contradice las notas, gana la bitácora. Máximo 40 líneas en viñetas, en español.
 Responde solo con las notas.`;
 
 export type OpcionesMemoria = {

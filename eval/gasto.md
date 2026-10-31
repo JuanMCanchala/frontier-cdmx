@@ -11,3 +11,11 @@ Key del evento: $45 sin recarga. Una fila por corrida que gasta.
 | 2026-10-31T18:34:54.277Z | E4-exportar-pedidos.json (pasa, 38s) | anthropic/claude-sonnet-5.5 (high) | $0.0490 |
 | 2026-10-31T18:35:25.149Z | E5-homonimos.json (pasa, 25s) | anthropic/claude-sonnet-5.5 (high) | $0.0372 |
 | 2026-10-31T18:40:53Z | E2 por el contrato HTTP en Railway (pasa, 43s, POST 279 ms) | anthropic/claude-sonnet-5.5 (high) | $0.0593 |
+| 2026-10-31T19:02:22Z | E2 por el contrato HTTP en Railway, espera de repintado 1.2 s (pasa, 53s) | anthropic/claude-sonnet-5.5 (high) | $0.0640 |
+| 2026-10-31T19:05:25Z | E1 por el contrato HTTP en Railway (pasa, 80s) | anthropic/claude-sonnet-5.5 (high) | $0.0832 |
+| 2026-10-31T19:06:19Z | E2 por el contrato HTTP en Railway (pasa, 48s) | anthropic/claude-sonnet-5.5 (high) | $0.0622 |
+| 2026-10-31T19:07:04Z | E3 por el contrato HTTP en Railway (pasa, 37s) | anthropic/claude-sonnet-5.5 (high) | $0.0588 |
+| 2026-10-31T19:07:51Z | E4 por el contrato HTTP en Railway (pasa, 43s) | anthropic/claude-sonnet-5.5 (high) | $0.0501 |
+| 2026-10-31T19:08:26Z | E5 por el contrato HTTP en Railway (pasa, 32s) | anthropic/claude-sonnet-5.5 (high) | $0.0414 |
+
+Banco por el contrato HTTP en Railway: 5 de 5, POST entre 281 y 294 ms. Saldo después: $44.22.

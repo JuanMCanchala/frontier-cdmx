@@ -234,7 +234,7 @@ const elegir = defineTool({
   executionMode: "sequential",
   description:
     "Elige una opción de una lista desplegable: clic en la lista en (x, y), escribe el comienzo de la opción y Enter. " +
-    "Devuelve la pantalla: confirma que quedó la opción correcta.",
+    "Úsala en vez de pulsar + Enter sobre una lista abierta. Devuelve la pantalla: confirma que quedó la opción correcta.",
   parameters: Type.Object({
     x: Type.Number(),
     y: Type.Number(),

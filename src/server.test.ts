@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -18,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import type { RunOptions, TaskInput, TaskResult } from "./agent/run-task.ts";
 import {
   createApp,
+  findExecutable,
   loadConfig,
   redact,
   type App,
@@ -109,7 +111,7 @@ async function start(
     teamToken: TOKEN,
     openrouterKey: OR_KEY,
     dataDir,
-    piBin: "pi",
+    piBin: process.execPath, // un ejecutable que existe: /health lo comprueba
     agentModel: "modelo/agente",
     guardModel: "modelo/guardia",
     thinking: "high",
@@ -196,6 +198,24 @@ test("las conexiones keep-alive duran más que el sondeo de 5 s y que el proxy d
     h.app.server.keepAliveTimeout > 60_000,
     `keepAliveTimeout = ${h.app.server.keepAliveTimeout}`,
   );
+});
+
+test("GET /health responde 503 si no está el ejecutable de pi", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "cdmx-bin-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  for (const piBin of [join(dir, "no-existe"), dir, "pi-que-no-esta-en-path"]) {
+    const h = await start(t, { piBin });
+    const r = await h.api("/health", { token: null });
+    assert.equal(r.status, 503, piBin);
+    assert.equal(r.json.ok, false);
+  }
+  const noExec = join(dir, "pi");
+  writeFileSync(noExec, "#!/bin/sh\n", { mode: 0o644 });
+  assert.equal(findExecutable(noExec), false);
+  assert.equal(findExecutable("pi", dir), false);
+  chmodSync(noExec, 0o755);
+  assert.equal(findExecutable(noExec), true);
+  assert.equal(findExecutable("pi", `/no/existe:${dir}`), true);
 });
 
 test("/tasks exige el token del equipo", async (t) => {
@@ -630,7 +650,7 @@ test("con app conocida actualiza el manual en segundo plano; sin app, no", async
   assert.equal(traceDir, "/data/traces/a");
   assert.equal(resumen, "ok [oculto]");
   assert.deepEqual(opt, {
-    piBin: "pi",
+    piBin: process.execPath,
     openrouterKey: OR_KEY,
     model: "modelo/guardia",
     dataDir: h.dataDir,

@@ -4,11 +4,14 @@
 // arranque real (este archivo ejecutado como main) importa src/agent/*.
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
+  accessSync,
+  constants,
   mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import {
@@ -17,7 +20,7 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { RunOptions, TaskInput, TaskResult } from "./agent/run-task.ts";
 
@@ -223,6 +226,27 @@ function validWsUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** Si `bin` es un ejecutable: una ruta (con "/") o un nombre que se busca en PATH, como hace spawn. */
+export function findExecutable(
+  bin: string,
+  pathEnv: string = process.env.PATH ?? "",
+): boolean {
+  const candidates = bin.includes("/")
+    ? [bin]
+    : pathEnv
+        .split(delimiter)
+        .filter(Boolean)
+        .map((dir) => join(dir, bin));
+  return candidates.some((file) => {
+    try {
+      accessSync(file, constants.X_OK);
+      return statSync(file).isFile();
+    } catch {
+      return false;
+    }
+  });
 }
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
@@ -707,6 +731,13 @@ export function createApp(deps: AppDeps): App {
           { error: "método no permitido" },
           { Allow: "GET, HEAD" },
         );
+      // "Responde 200 cuando el agente está listo": sin el binario de pi toda tarea fallaría, y un
+      // 503 hace que el chequeo de salud de Railway no dé por bueno un despliegue roto.
+      if (!findExecutable(config.piBin))
+        return send(res, 503, {
+          ok: false,
+          error: "no se encuentra el ejecutable de pi (PI_BIN)",
+        });
       return send(res, 200, { ok: true });
     }
 

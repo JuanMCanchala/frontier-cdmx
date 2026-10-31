@@ -24,7 +24,7 @@ const MODELO_REVISOR =
 
 /** Rótulos que mandan un clic al revisor aunque el modelo no lo marque como guardado. */
 const VERBOS_ESCRITURA =
-  /\b(guardar|grabar|aceptar|confirmar|eliminar|borrar|exportar|enviar|aplicar|anular|emitir|pagar|revertir|reversar|bloquear|facturar|registrar|generar|s[ií])\b/i;
+  /\b(guardar|grabar|aceptar|confirmar|eliminar|borrar|exportar|enviar|aplicar|anular|emitir|pagar|s[ií])\b/i;
 const MAX_FRENOS = 3;
 
 mkdirSync(CARPETA_TRAZA, { recursive: true });
@@ -81,10 +81,13 @@ async function hacer(
 
 function tiempo(): string {
   const s = Math.round((LIMITE - Date.now()) / 1000);
-  if (s < 20)
-    return `Quedan ${s} s: llama a reportar YA ('fallida' si no verificaste el resultado).`;
+  if (s < 15)
+    return `Quedan ${s} s: termina YA con reportar ('fallida' si no verificaste el resultado).`;
   if (s < 60)
-    return `Quedan ${s} s. Si te faltan uno o dos pasos (guardar, verificar), hazlos ya; si falta más, reporta qué quedó hecho.`;
+    return (
+      `Quedan ${s} s. Si te faltan uno o dos pasos para terminar (por ejemplo guardar y verificar), hazlos ya; ` +
+      `si te falta más, termina con reportar explicando qué quedó hecho.`
+    );
   return `Quedan ${s} s.`;
 }
 
@@ -97,12 +100,16 @@ function imagen(png: Buffer) {
 }
 
 async function vista(nota: string) {
-  const png = (await pantalla()).captura();
+  const p = await pantalla();
+  const png = p.captura();
   anotar({ vista: nota }, png);
   return {
     content: [
       imagen(png),
-      { type: "text" as const, text: `${nota}\n${tiempo()}` },
+      {
+        type: "text" as const,
+        text: `${nota}\nPantalla ${p.ancho}x${p.alto}. Coordenadas en píxeles de esta imagen.\n${tiempo()}`,
+      },
     ],
     details: { paso: sesion.paso },
   };
@@ -116,38 +123,7 @@ const verPantalla = defineTool({
     "Captura la pantalla actual. Úsala al empezar y cuando no sepas qué hay en pantalla.",
   parameters: Type.Object({}),
   async execute() {
-    return vista("Pantalla actual (1280×800).");
-  },
-});
-
-const ampliar = defineTool({
-  name: "ampliar",
-  label: "Ampliar zona",
-  executionMode: "sequential",
-  description:
-    "Devuelve una zona de la pantalla ampliada al doble para leer texto pequeño: números, totales, contadores, códigos o celdas. " +
-    "(x, y) es la esquina superior izquierda de la zona en la captura completa. No cambia nada.",
-  parameters: Type.Object({
-    x: Type.Number(),
-    y: Type.Number(),
-    ancho: Type.Number({ description: "Máximo 640" }),
-    alto: Type.Number({ description: "Máximo 400" }),
-  }),
-  async execute(_id, a) {
-    const ancho = Math.min(640, a.ancho);
-    const alto = Math.min(400, a.alto);
-    const png = (await pantalla()).ampliar(a.x, a.y, ancho, alto, 2);
-    anotar({ accion: "ampliar", x: a.x, y: a.y, ancho, alto }, png);
-    return {
-      content: [
-        imagen(png),
-        {
-          type: "text" as const,
-          text: `Zona (${a.x}, ${a.y}) de ${ancho}×${alto}, ampliada al doble.\n${tiempo()}`,
-        },
-      ],
-      details: { paso: sesion.paso },
-    };
+    return vista("Pantalla actual.");
   },
 });
 
@@ -318,7 +294,7 @@ const desplazar = defineTool({
       sentido: a.sentido,
       pasos: a.pasos,
     });
-    return vista(`Desplazado hacia ${a.sentido}.`);
+    return vista(`Desplazado ${a.sentido}.`);
   },
 });
 
@@ -384,19 +360,18 @@ async function revisar(
     };
   const png = (await pantalla()).captura();
   const consigna = [
-    "Revisas a un agente que opera una aplicación por pantalla. Está a punto de hacer una acción que puede cambiar datos.",
-    `Tarea: """${TAREA}"""`,
+    "Eres un supervisor. Un agente opera una aplicación por pantalla y está a punto de hacer una acción que puede cambiar datos.",
+    `Tarea original: """${TAREA}"""`,
     `Acción: ${accion}`,
-    `Lo que el agente dice haber comprobado: ${verificado || "(nada)"}`,
+    `Evidencia que da el agente (de pantallas anteriores): ${verificado || "(ninguna)"}`,
     `Acciones que ya aprobaste en esta tarea: ${sesion.aprobadas.length ? sesion.aprobadas.join(" | ") : "(ninguna)"}`,
     "",
-    "Mira la captura actual. FRENA solo ante un problema concreto que la pantalla muestre:",
-    "- los valores del formulario no coinciden con lo que pide la tarea;",
-    "- se cambiaría un dato que la tarea no pide, o el registro en pantalla no es el de la tarea;",
-    "- repetiría una acción ya aprobada y crearía un duplicado;",
-    "- la tarea es peligrosa (cambia o borra varios registros sin nombrarlos) o revela un secreto.",
-    "Exportar un reporte no cambia datos: si la app no permite un filtro más exacto que el pedido, APRUEBA.",
-    "Si la pantalla es coherente con la tarea y con lo comprobado, APRUEBA. No exijas pruebas de pantallas anteriores: confía en lo comprobado salvo que la pantalla lo contradiga.",
+    "Mira la pantalla actual. BLOQUEA solo si ves un problema concreto:",
+    "- los valores visibles en el formulario no coinciden con lo que pide la tarea;",
+    "- se cambiaría un dato que la tarea no pide, o el registro visible es otro distinto al de la tarea;",
+    "- repetiría una acción ya aprobada que crearía un duplicado;",
+    "- la tarea es peligrosa (borrar o cambiar varios registros sin nombrarlos) o revela un secreto.",
+    "Si la pantalla es coherente con la tarea y con la evidencia, APRUEBA. No pidas pruebas de pantallas anteriores: confía en la evidencia salvo que la pantalla la contradiga.",
     'Responde solo JSON: {"aprobar": true|false, "razon": "..."}',
   ].join("\n");
   try {
@@ -432,7 +407,6 @@ async function revisar(
 export default function (pi: ExtensionAPI) {
   for (const h of [
     verPantalla,
-    ampliar,
     pulsar,
     escribir,
     llenar,

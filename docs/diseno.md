@@ -9,7 +9,7 @@
 3. Un revisor (Haiku 5.5) mira la pantalla antes de cada acción que reconoce como escritura (un clic marcado como guardar, un rótulo con verbo de escritura, Enter) y la frena **solo** si la pantalla contradice la tarea. Lo que no se ve como escritura pasa sin él (sección 9). No hay listas blancas en el código.
 4. Cada tarea corre en su propio proceso de `pi`. Al reportar se cierra la conexión VNC, el proceso se mata y solo después se publica el estado. Nada actúa sobre el escritorio después del reporte ni pasado el plazo.
 5. Para la primera corrida oficial, el comportamiento se alineó a propósito con la versión de la referencia que sacó 51/56 en el set oculto de octubre. Las mejoras propias, como ampliar una zona de la pantalla, quedan para después de medir (sección 2).
-6. Medido hoy en el escritorio de práctica: 5 de 5 tareas, entre 25 y 60 s y entre 0.037 y 0.072 USD por tarea ([eval/gasto.md](../eval/gasto.md)). El set oculto todavía no tiene corrida registrada en el repo: es lo primero que falta medir.
+6. Medido hoy en el escritorio de práctica ([eval/gasto.md](../eval/gasto.md)): 5 de 5 tareas en local, antes de esa alineación, entre 25 y 60 s y entre 0.037 y 0.072 USD por tarea; y 5 de 5 por el contrato HTTP en Railway, entre 32 y 80 s y entre 0.041 y 0.083 USD por tarea, con el POST respondido en 281 a 294 ms. El banco de Railway corrió después de que la alineación llegara a `main`, pero no está anotado qué commit estaba desplegado. El set oculto todavía no tiene corrida registrada en el repo: es lo primero que falta medir.
 
 ## 1. Contexto y problema
 
@@ -63,14 +63,14 @@ Lo que se conserva de Aprendiz: cliente RFB propio con clic de 150 ms, cerrar an
 
 ### Objetivos
 
-| #   | Objetivo                                        | Medida                                                                                                                                                                                          |
-| --- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| O1  | Resolver tareas en una app que no conoce        | Set oculto. **Pendiente:** sin corrida registrada                                                                                                                                               |
-| O2  | Cero falsos éxitos y cero acciones destructivas | Meta, no garantía. En las 5 tareas de práctica: ninguno (5/5 pasan `/__check`, que incluye "sin acciones fuera de la tarea")                                                                    |
-| O3  | No negar de más                                 | Que ningún freno del revisor detenga una acción que la pantalla sostenía. Se revisa en las trazas del set oculto (pendiente)                                                                    |
-| O4  | Cerrar dentro del plazo                         | Corte del agente a los 285 s desde el POST y publicación de respaldo a los 295 s (293 s en Railway, con `TASK_GRACE_MS=8000`), antes de los 300 s del evaluador. En práctica: 25–60 s por tarea |
-| O5  | Costo acotado                                   | Tope duro de 0.50 USD por tarea. En práctica: 0.037–0.072 USD por tarea (solo el bucle principal; ver 6.6)                                                                                      |
-| O6  | `POST /tasks` en menos de 2 s                   | Responde antes de lanzar el agente. Latencia en el despliegue: no medida                                                                                                                        |
+| #   | Objetivo                                        | Medida                                                                                                                                                                                                                                             |
+| --- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O1  | Resolver tareas en una app que no conoce        | Set oculto. **Pendiente:** sin corrida registrada                                                                                                                                                                                                  |
+| O2  | Cero falsos éxitos y cero acciones destructivas | Meta, no garantía. En las corridas de práctica registradas (5 locales, 5 por el contrato HTTP en Railway y dos E2 sueltas en Railway): ninguno (todas pasan `/__check`, que incluye "sin acciones fuera de la tarea")                              |
+| O3  | No negar de más                                 | Que ningún freno del revisor detenga una acción que la pantalla sostenía. Se revisa en las trazas del set oculto (pendiente)                                                                                                                       |
+| O4  | Cerrar dentro del plazo                         | Corte del agente a los 285 s desde el POST y publicación de respaldo a los 295 s (293 s en Railway, con `TASK_GRACE_MS=8000`), antes de los 300 s del evaluador. En práctica: 25–60 s por tarea en local y 32–80 s por el contrato HTTP en Railway |
+| O5  | Costo acotado                                   | Tope duro de 0.50 USD por tarea. En práctica: 0.037–0.083 USD por tarea (solo el bucle principal; ver 6.6)                                                                                                                                         |
+| O6  | `POST /tasks` en menos de 2 s                   | Responde antes de lanzar el agente. En Railway: 279 ms en la primera corrida y entre 281 y 294 ms en el banco de 5                                                                                                                                 |
 
 ### No-objetivos
 
@@ -224,24 +224,25 @@ Constantes del código (todas configurables por entorno donde se indica):
 
 Con un escritorio libre, la línea de tiempo de una tarea es: el modelo ve su reloj llegar a cero a los 270 s del POST, el ejecutor mata `pi` a los 285 s, el servidor pide parar a los 290 s y publica `fallida` a los 295 s si nada de lo anterior devolvió (con `TASK_GRACE_MS=8000`, como en Railway, a los 289 s y a los 293 s). El evaluador deja de consultar a los 300 s.
 
-**Medido** (escritorio de práctica, 31 de octubre, [eval/gasto.md](../eval/gasto.md)):
+**Medido** (escritorio de práctica, 31 de octubre, [eval/gasto.md](../eval/gasto.md)). En local, `scripts/probar.ts` llama al ejecutor; en Railway, `scripts/probar-remoto.ts` pasa por el contrato HTTP del agente desplegado. Todas las corridas pasan.
 
-| Tarea | Tipo                    | Resultado           | Tiempo      | Costo (pi)          |
-| ----- | ----------------------- | ------------------- | ----------- | ------------------- |
-| E1    | Crear                   | Pasa                | 60 s        | 0.0723 USD          |
-| E2    | Editar                  | Pasa (dos corridas) | 50 s y 48 s | 0.0691 y 0.0645 USD |
-| E3    | Contar                  | Pasa                | 39 s        | 0.0578 USD          |
-| E4    | Exportar                | Pasa                | 38 s        | 0.0490 USD          |
-| E5    | Homónimos (debe fallar) | Pasa                | 25 s        | 0.0372 USD          |
+| Tarea | Tipo                    | Local: tiempo | Local: costo (pi)   | Railway: tiempo | Railway: costo (pi) |
+| ----- | ----------------------- | ------------- | ------------------- | --------------- | ------------------- |
+| E1    | Crear                   | 60 s          | 0.0723 USD          | 80 s            | 0.0832 USD          |
+| E2    | Editar                  | 50 s y 48 s   | 0.0691 y 0.0645 USD | 48 s            | 0.0622 USD          |
+| E3    | Contar                  | 39 s          | 0.0578 USD          | 37 s            | 0.0588 USD          |
+| E4    | Exportar                | 38 s          | 0.0490 USD          | 43 s            | 0.0501 USD          |
+| E5    | Homónimos (debe fallar) | 25 s          | 0.0372 USD          | 32 s            | 0.0414 USD          |
 
-En el banco de 5 de 5 (corridas de las 18:32 a las 18:35 UTC): 42 s y 0.056 USD de media por tarea, 0.28 USD en total. Todas las tareas quedaron muy por debajo del plazo y del tope.
+Banco local de 5 de 5 (18:32 a 18:35 UTC): 42 s y 0.056 USD de media por tarea, 0.28 USD en total. Banco en Railway de 5 de 5 (19:05 a 19:08 UTC): 48 s y 0.059 USD de media por tarea, 0.30 USD en total, con el POST respondido entre 281 y 294 ms. Además hay dos corridas sueltas de E2 en Railway: 43 s y 0.0593 USD con el POST en 279 ms (18:40 UTC), y 53 s y 0.0640 USD (19:02 UTC), ya con la espera mínima de 1200 ms. Todas las tareas quedaron muy por debajo del plazo y del tope.
 
 Límites de esa medición:
 
 - **El costo es el que reporta `pi` por los turnos del agente.** Las llamadas del revisor salen por el registro de modelos de la extensión y las notas por otro proceso; ninguna pasa por ese conteo, y el tope de 0.50 USD tampoco las cuenta. Su costo real está pendiente de medir.
-- Son cinco tareas de una sola app, con una corrida por tarea (dos en E2): no hay p95 ni consistencia entre corridas.
-- `scripts/probar.ts` llama al ejecutor directamente; el contrato HTTP se prueba aparte con un ejecutor falso.
-- No está anotado si esas corridas usaron notas por app; el script corre sin ellas salvo con `MEMORIA=1`.
+- **Versión.** El banco local y la primera corrida de Railway son de antes de la alineación de la sección 2 (entre otras diferencias, con espera mínima de 700 ms y con la herramienta `ampliar`). El banco de Railway corrió después de que los cambios de la alineación llegaran a `main` (19:00 a 19:03 UTC), pero `eval/gasto.md` no anota qué commit estaba desplegado en cada corrida.
+- Son cinco tareas de una sola app, con una corrida por tarea en cada banco (cinco en E2, contando las sueltas): no hay p95 ni consistencia entre corridas.
+- El tiempo de Railway se mide como lo vería el evaluador, consultando cada 5 s, así que incluye hasta 5 s de espera del sondeo. Las pruebas automáticas cubren el contrato HTTP con un ejecutor falso.
+- No está anotado si las corridas locales usaron notas por app; `scripts/probar.ts` corre sin ellas salvo con `MEMORIA=1`. En Railway el servidor siempre agrega las notas que haya en el volumen.
 
 ## 7. Decisiones (ADR)
 
@@ -322,7 +323,7 @@ Límites de esa medición:
 
 ### ADR-9 · Modelos: Sonnet 5.5 decide, Haiku 5.5 revisa
 
-- **Contexto.** La lección de octubre fue que, cuando el costo no limita, conviene el modelo fuerte. Medido hoy: entre 0.037 y 0.072 USD por tarea, lejos del tope de 0.50 USD.
+- **Contexto.** La lección de octubre fue que, cuando el costo no limita, conviene el modelo fuerte. Medido hoy: entre 0.037 y 0.083 USD por tarea, lejos del tope de 0.50 USD.
 - **Decisión.** `anthropic/claude-sonnet-5.5` con razonamiento `high` como agente; `anthropic/claude-haiku-5.5` como revisor y para las notas. Los tres se cambian por entorno.
 - **Descartado.** _Un modelo barato como agente con controles alrededor_: es lo que hizo Aprendiz. _El modelo fuerte también como revisor_: más caro para una decisión de sí o no sobre una captura, sin una medición que lo justifique.
 - **Consecuencias.** Revisor y agente son de la misma familia, así que sus fallas pueden estar correlacionadas; el revisor solo ve la pantalla y la tarea, no el razonamiento del agente.
@@ -379,22 +380,23 @@ Detalle por límite en [arquitectura.md](arquitectura.md#3-límites-de-confianza
 
 ## 9. Riesgos y mitigaciones
 
-| Riesgo                                                                                                                                     | Efecto                                                            | Mitigación                                                                 | Detección                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Una escritura que no se ve como escritura (toggle, ícono, autoguardado, Enter dentro de `elegir`, «Sí» con tilde, «Registrar» o «Generar») | Pasa sin revisor                                                  | Instrucciones: guardar siempre con intención `guardar`; verbos del rótulo  | Diff inesperado en `/__check`; trazas                        |
-| El revisor frena de más                                                                                                                    | Vuelve la falla de octubre                                        | Consigna de frenar solo contradicciones visibles; tope de tres frenos      | Frenos y sus razones en `pasos.jsonl`                        |
-| El revisor aprueba algo malo                                                                                                               | Un cambio de más o equivocado                                     | Las instrucciones son la primera línea; el revisor, la segunda             | `/__check`                                                   |
-| Texto en pantalla manipula al agente                                                                                                       | Una escritura no pedida                                           | Regla en las instrucciones; el revisor ve la tarea original                | Pruebas con notas inyectadas (pendiente ampliar)             |
-| La app de evaluación es muy distinta                                                                                                       | El agente se pierde                                               | Instrucciones generales; ante la duda, `fallida` con razón                 | Set oculto (pendiente)                                       |
-| El costo real supera al contado                                                                                                            | El tope de 0.50 USD no frena el gasto del revisor ni de las notas | Medido 0.037–0.072 USD por tarea en el bucle principal, lejos del tope     | Saldo de OpenRouter antes y después (pendiente)              |
-| Fecha relativa mal calculada                                                                                                               | Valor equivocado reportado como éxito                             | Instrucción de contar desde "Hoy" de la app                                | Pruebas con fechas relativas (pendiente)                     |
-| Texto pequeño mal leído (totales, contadores, códigos)                                                                                     | Valor equivocado reportado como éxito                             | Ninguna propia: sin `ampliar`, el modelo lee la captura completa           | `scripts/probar.ts` compara el primer número                 |
-| Formato de la respuesta (separadores, texto antes del número)                                                                              | Respuesta mal comparada                                           | Instrucciones y descripción de `reportar`; el código pone la línea primera | `scripts/probar.ts` compara el primer número                 |
-| Notas equivocadas o con datos                                                                                                              | Pistas falsas o datos persistidos                                 | Notas como pistas; la bitácora gana sobre las notas viejas                 | Revisar `notas-apps/`                                        |
-| Un redespliegue sin el volumen `/data`                                                                                                     | Se borran tareas y notas                                          | Volumen de Railway montado en `/data`                                      | `GET /tasks/{id}` de una tarea anterior tras un redespliegue |
-| Pantalla de otro tamaño                                                                                                                    | Las instrucciones dicen 1280×800                                  | Cada captura le dice al modelo su tamaño real; el código no lo valida      | Humo de VNC; trazas                                          |
-| Proveedor lento o caído                                                                                                                    | Pasos sin respuesta                                               | El ejecutor corta al plazo pase lo que pase                                | Motivo `sin_tiempo` en el log                                |
-| Reinicio del contenedor                                                                                                                    | Se pierde la tarea en curso                                       | Queda `fallida` y consultable; reinicio `ALWAYS`                           | `/health`; log `tarea_ilegible` o motivo `reinicio`          |
+| Riesgo                                                                                                                                     | Efecto                                                                                                             | Mitigación                                                                 | Detección                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Una escritura que no se ve como escritura (toggle, ícono, autoguardado, Enter dentro de `elegir`, «Sí» con tilde, «Registrar» o «Generar») | Pasa sin revisor                                                                                                   | Instrucciones: guardar siempre con intención `guardar`; verbos del rótulo  | Diff inesperado en `/__check`; trazas                        |
+| El revisor frena de más                                                                                                                    | Vuelve la falla de octubre                                                                                         | Consigna de frenar solo contradicciones visibles; tope de tres frenos      | Frenos y sus razones en `pasos.jsonl`                        |
+| El revisor aprueba algo malo                                                                                                               | Un cambio de más o equivocado                                                                                      | Las instrucciones son la primera línea; el revisor, la segunda             | `/__check`                                                   |
+| Texto en pantalla manipula al agente                                                                                                       | Una escritura no pedida                                                                                            | Regla en las instrucciones; el revisor ve la tarea original                | Pruebas con notas inyectadas (pendiente ampliar)             |
+| La app de evaluación es muy distinta                                                                                                       | El agente se pierde                                                                                                | Instrucciones generales; ante la duda, `fallida` con razón                 | Set oculto (pendiente)                                       |
+| El costo real supera al contado                                                                                                            | El tope de 0.50 USD no frena el gasto del revisor ni de las notas                                                  | Medido 0.037–0.072 USD por tarea en el bucle principal, lejos del tope     | Saldo de OpenRouter antes y después (pendiente)              |
+| Fecha relativa mal calculada                                                                                                               | Valor equivocado reportado como éxito                                                                              | Instrucción de contar desde "Hoy" de la app                                | Pruebas con fechas relativas (pendiente)                     |
+| Texto pequeño mal leído (totales, contadores, códigos)                                                                                     | Valor equivocado reportado como éxito                                                                              | Ninguna propia: sin `ampliar`, el modelo lee la captura completa           | `scripts/probar.ts` compara el primer número                 |
+| Formato de la respuesta (separadores, texto antes del número)                                                                              | Respuesta mal comparada                                                                                            | Instrucciones y descripción de `reportar`; el código pone la línea primera | `scripts/probar.ts` compara el primer número                 |
+| Notas equivocadas o con datos                                                                                                              | Pistas falsas o datos persistidos                                                                                  | Notas como pistas; la bitácora gana sobre las notas viejas                 | Revisar `notas-apps/`                                        |
+| Un redespliegue sin el volumen `/data`                                                                                                     | Se borran tareas y notas                                                                                           | Volumen de Railway montado en `/data`                                      | `GET /tasks/{id}` de una tarea anterior tras un redespliegue |
+| Pantalla de otro tamaño                                                                                                                    | Las instrucciones dicen 1280×800                                                                                   | Cada captura le dice al modelo su tamaño real; el código no lo valida      | Humo de VNC; trazas                                          |
+| Proveedor lento o caído                                                                                                                    | Pasos sin respuesta                                                                                                | El ejecutor corta al plazo pase lo que pase                                | Motivo `sin_tiempo` en el log                                |
+| No está anotado con qué versión corrió cada medición                                                                                       | Tiempo y costo atribuidos a la versión equivocada; la espera mínima, por ejemplo, pasó de 700 a 1200 ms por acción | Ninguna todavía: `eval/gasto.md` no anota el commit desplegado             | Fechas de las corridas frente a las de los commits           |
+| Reinicio del contenedor                                                                                                                    | Se pierde la tarea en curso                                                                                        | Queda `fallida` y consultable; reinicio `ALWAYS`                           | `/health`; log `tarea_ilegible` o motivo `reinicio`          |
 
 ## 10. Cómo medimos
 
@@ -402,17 +404,19 @@ Detalle por límite en [arquitectura.md](arquitectura.md#3-límites-de-confianza
 
 **Banco de práctica** (`scripts/probar.ts`): `/__reset` → el ejecutor sobre la tarea → `/__check` → reglas de estado, del primer número de `respuesta:` y de los datos que tiene que nombrar una tarea que falla. Cada corrida anota tiempo y costo en [eval/gasto.md](../eval/gasto.md). Antes de una corrida que gasta se consulta el saldo y se empieza con una tarea; si la corrida pasa de 1 USD estimado, se confirma antes.
 
+**Contrato HTTP en el despliegue** (`scripts/probar-remoto.ts`): `/__reset` → `POST /tasks` al agente desplegado → consulta cada 5 s, como el evaluador → `/__check` y las mismas reglas del banco (`scripts/juicio.ts`). Imprime cuánto tardó el POST y el total; no escribe en `eval/gasto.md`, así que esas filas se anotan aparte. `scripts/bajar-datos.sh` baja del volumen `/data` las tareas, trazas y notas para revisar la corrida.
+
 **Set oculto** (hasta tres corridas por equipo desde `/evento`). Lección de octubre: correrlo apenas pase el primer caso de práctica, no al final. **Pendiente:** no hay corrida registrada en el repo.
 
 **Qué miramos.** En `DATA_DIR/tasks/<id>.json` y en la línea de log de la tarea, el motivo de cierre (`stopReason`: `reporto`, `sin_tiempo`, `proceso_caido`, `abortada` o `sin_presupuesto` desde el ejecutor; `tiempo`, `cancelada`, `error_interno` o `reinicio` desde el servidor). En la traza (`DATA_DIR/trazas/<id>/`), los pasos por tarea y cada freno del revisor con su razón. Con ambos, si cada falla fue daño, error del agente o negación propia. Esa última separación es la que en octubre llegó tarde.
 
 **Pendiente de medir:**
 
+- Qué commit corrió el banco de Railway; si no era la versión alineada, repetirlo anotando el commit desplegado.
 - Resultado en el set oculto, por dificultad y por tipo de falla.
 - Costo y latencia del revisor, y costo de las notas.
 - p95 de tiempo y costo, y consistencia entre corridas de la misma tarea.
 - Efecto de las notas por app (con y sin `MEMORIA=1`).
-- Tiempo de respuesta de `POST /tasks` en el despliegue.
 - Variaciones propias: dos datos en una pregunta, fechas relativas, notas inyectadas, crear algo que ya existe, exporte con otros filtros.
 
 ## 11. Preguntas abiertas

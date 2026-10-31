@@ -29,3 +29,8 @@ La plataforma reporta la corrida 1 como el 60 % del set. Saldo después: $40.54.
 | 2026-10-31T19:08:26Z | E5 por el contrato HTTP en Railway (pasa, 32s) | anthropic/claude-sonnet-5.5 (high) | $0.0414 |
 
 Banco por el contrato HTTP en Railway: 5 de 5, POST entre 281 y 294 ms. Saldo después: $44.22.
+| 2026-10-31T21:58:11.742Z | E1-crear-cliente.json (pasa, 60s) | anthropic/claude-sonnet-5.5 (high) | $0.0769 |
+| 2026-10-31T21:59:10.629Z | E2-direccion-con-nota.json (pasa, 53s) | anthropic/claude-sonnet-5.5 (high) | $0.0625 |
+| 2026-10-31T21:59:57.780Z | E3-facturas-vencidas.json (pasa, 42s) | anthropic/claude-sonnet-5.5 (high) | $0.0583 |
+| 2026-10-31T22:00:53.945Z | E4-exportar-pedidos.json (pasa, 51s) | anthropic/claude-sonnet-5.5 (high) | $0.0608 |
+| 2026-10-31T22:01:29.359Z | E5-homonimos.json (pasa, 30s) | anthropic/claude-sonnet-5.5 (high) | $0.0415 |

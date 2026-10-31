@@ -165,13 +165,13 @@ export class Pantalla {
     const mascara = op.derecho ? 4 : 1;
     const t = performance.now();
     this.conexion.puntero(x, y, 0);
-    await pausa(50);
+    await pausa(40);
     const veces = op.doble ? 2 : 1;
     for (let i = 0; i < veces; i++) {
       this.conexion.puntero(x, y, mascara);
       await pausa(150); // la app ignora pulsaciones de menos de 100 ms
       this.conexion.puntero(x, y, 0);
-      if (i < veces - 1) await pausa(90);
+      if (i < veces - 1) await pausa(80);
     }
     await this.esperarCalma(t);
   }
@@ -213,9 +213,9 @@ export class Pantalla {
     for (const c of texto) {
       const sym = teclaDe(c);
       this.conexion.tecla(sym, true);
-      await pausa(12);
+      await pausa(15);
       this.conexion.tecla(sym, false);
-      await pausa(12);
+      await pausa(15);
     }
     await this.esperarCalma(t);
   }

@@ -6,7 +6,7 @@
 
 1. Operador recibe una tarea en lenguaje natural y la ejecuta en una aplicación de escritorio que no conoce y que no tiene API. Solo la ve por VNC, en capturas de 1280×800, y tiene que terminar dentro de los 5 minutos que el evaluador espera.
 2. Todo pasa en un solo bucle. `pi` corre Sonnet 5.5 con razonamiento alto, y el modelo decide cada paso sobre la captura del momento con nueve herramientas propias de pantalla. No hay planificador previo ni plan cerrado: decide el modelo que ve la pantalla.
-3. Un revisor (Haiku 5.5) mira la pantalla antes de cada acción que puede cambiar datos (guardar, un rótulo con verbo de escritura, Enter) y la frena **solo** si la pantalla contradice la tarea. No hay listas blancas en el código.
+3. Un revisor (Haiku 5.5) mira la pantalla antes de cada acción que reconoce como escritura (un clic marcado como guardar, un rótulo con verbo de escritura, Enter) y la frena **solo** si la pantalla contradice la tarea. Lo que no se ve como escritura pasa sin él (sección 9). No hay listas blancas en el código.
 4. Cada tarea corre en su propio proceso de `pi`. Al reportar se cierra la conexión VNC, el proceso se mata y solo después se publica el estado. Nada actúa sobre el escritorio después del reporte ni pasado el plazo.
 5. Medido hoy en el escritorio de práctica: 5 de 5 tareas, entre 25 y 60 s y entre 0.037 y 0.072 USD por tarea ([eval/gasto.md](../eval/gasto.md)). El set oculto todavía no tiene corrida registrada en el repo: es lo primero que falta medir.
 

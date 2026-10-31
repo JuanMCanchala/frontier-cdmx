@@ -499,6 +499,30 @@ test("404 para un task_id que no existe y para rutas desconocidas", async (t) =>
   assert.equal((await h.api("/tasks/abc", { method: "DELETE" })).status, 405);
 });
 
+test("las rutas aceptan barras repetidas o finales (entrypoint registrado con '/' al final)", async (t) => {
+  const h = await start(t);
+  const body = { tarea: "x", escritorio: { url: DESK_A, password: PASSWORD } };
+  for (const path of ["//tasks", "/tasks/", "//tasks/"]) {
+    const r = await h.api(path, { body });
+    assert.equal(r.status, 200, path);
+    assert.match(r.json.task_id, /^[0-9a-f-]{36}$/);
+  }
+  const id = (
+    await h.api("//tasks", {
+      body: { ...body, escritorio: { url: DESK_B, password: PASSWORD } },
+    })
+  ).json.task_id;
+  for (const path of [`//tasks/${id}`, `/tasks/${id}/`, `/tasks/${id}?x=1`]) {
+    const r = await h.api(path);
+    assert.equal(r.status, 200, path);
+    assert.equal(r.json.estado, "en_curso");
+  }
+  assert.deepEqual((await h.api("//health", { token: null })).json, {
+    ok: true,
+  });
+  assert.equal((await h.api("//tasks", { body, token: null })).status, 401);
+});
+
 test("con app conocida actualiza el manual en segundo plano; sin app, no", async (t) => {
   const h = await start(t);
   const a = await h.post("A", DESK_A);

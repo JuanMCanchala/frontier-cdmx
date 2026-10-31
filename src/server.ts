@@ -271,6 +271,25 @@ function digest(s: string): Buffer {
   return createHash("sha256").update(s).digest();
 }
 
+/**
+ * Ruta de la petición sin query, con las barras repetidas colapsadas y sin barra final. Así
+ * `https://host/` + `/tasks` (= `//tasks`) y `/tasks/<id>/` llegan a su ruta. `new URL("//tasks", …)`
+ * no sirve: lee `tasks` como host.
+ */
+export function routePath(rawUrl: string): string {
+  let path = rawUrl.split(/[?#]/, 1)[0];
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(path)) {
+    try {
+      path = new URL(path).pathname;
+    } catch {
+      return "/";
+    }
+  }
+  path = path.replace(/\/{2,}/g, "/");
+  if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
 // ── Aplicación ───────────────────────────────────────────────────────────────
 
 type Slot = { ctl: AbortController; done: Promise<void> };
@@ -654,7 +673,7 @@ export function createApp(deps: AppDeps): App {
     req: IncomingMessage,
     res: ServerResponse,
   ): Promise<void> {
-    const path = new URL(req.url ?? "/", "http://localhost").pathname;
+    const path = routePath(req.url ?? "/");
     const method = req.method ?? "GET";
 
     if (path === "/health") {

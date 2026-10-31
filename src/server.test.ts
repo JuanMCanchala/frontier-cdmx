@@ -452,6 +452,32 @@ test("respaldo: si el ejecutor no devuelve a tiempo, la tarea se publica fallida
   assert.ok(h.logs.some((l) => JSON.parse(l).evento === "resultado_tardio"));
 });
 
+test("respaldo: primero pide parar y solo después reporta; si el ejecutor para a tiempo, cuenta su resultado", async (t) => {
+  const h = await start(t, { deadlineMs: 40, graceMs: 400 });
+  const id = await h.post("tarea que se pasa del tiempo");
+  await waitFor(() => h.calls.length === 1);
+  const call = h.calls[0];
+  await waitFor(() => call.opt.signal?.aborted === true);
+  assert.equal(call.opt.signal?.reason, "se acabó el tiempo");
+  assert.equal(
+    (await h.get(id)).estado,
+    "en_curso",
+    "no se reporta mientras el agente puede seguir operando",
+  );
+  call.resolve(
+    result({
+      estado: "fallida",
+      resumen: "Me detuve por tiempo.",
+      stopReason: "tiempo",
+    }),
+  );
+  await h.app.idle();
+  assert.deepEqual(await h.get(id), {
+    estado: "fallida",
+    resumen: "Me detuve por tiempo.",
+  });
+});
+
 test("las tareas se guardan en disco y las que quedaron en curso pasan a fallida al reiniciar", async (t) => {
   const dataDir = mkdtempSync(join(tmpdir(), "cdmx-servidor-"));
   t.after(() => rmSync(dataDir, { recursive: true, force: true }));

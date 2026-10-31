@@ -33,7 +33,10 @@ export type Config = {
   /** Tiempo total de una tarea, medido desde que llegó el POST. */
   deadlineMs: number;
   maxCostUsd: number;
-  /** Respaldo: si el ejecutor no devolvió a los deadlineMs + graceMs, la tarea se da por fallida. */
+  /**
+   * Respaldo: si el ejecutor sigue a los deadlineMs + graceMs/2 se le pide parar, y si no devolvió a
+   * los deadlineMs + graceMs la tarea se da por fallida. Primero parar, después reportar.
+   */
   graceMs: number;
   /** Cuánto espera una tarea a que se detenga la anterior del mismo escritorio. */
   abortWaitMs: number;
@@ -455,13 +458,20 @@ export function createApp(deps: AppDeps): App {
     }
     if (rec.estado !== "en_curso") return; // el respaldo ya la cerró mientras esperaba
     if (ctl.signal.aborted) {
+      const timedOut = ctl.signal.reason === TIMEOUT;
       finish(
         rec,
-        {
-          estado: "fallida",
-          resumen: `No se ejecutó: ${SUPERSEDED}.`,
-          stopReason: "cancelada",
-        },
+        timedOut
+          ? {
+              estado: "fallida",
+              resumen: `No se terminó: ${TIMEOUT}.`,
+              stopReason: "tiempo",
+            }
+          : {
+              estado: "fallida",
+              resumen: `No se ejecutó: ${SUPERSEDED}.`,
+              stopReason: "cancelada",
+            },
         secrets,
         receivedAt,
       );
@@ -573,26 +583,27 @@ export function createApp(deps: AppDeps): App {
     desktops.set(input.wsUrl, slot);
     prev?.ctl.abort(SUPERSEDED);
 
-    // Respaldo: si el ejecutor no devuelve a tiempo, se publica fallida y se le pide parar.
-    const backup = setTimeout(
-      () => {
-        finish(
-          rec,
-          {
-            estado: "fallida",
-            resumen: `No se terminó: ${TIMEOUT}.`,
-            stopReason: "tiempo",
-          },
-          secrets,
-          receivedAt,
-        );
-        ctl.abort(TIMEOUT);
-      },
-      Math.max(
-        0,
-        config.deadlineMs + config.graceMs - (Date.now() - receivedAt),
-      ),
+    // Respaldo en dos pasos, para no reportar con el agente aún operando: primero se le pide parar
+    // y, si a los graceMs/2 siguientes no devolvió, se publica fallida (y se insiste en el abort).
+    const left = (ms: number) => Math.max(0, ms - (Date.now() - receivedAt));
+    const stopper = setTimeout(
+      () => ctl.abort(TIMEOUT),
+      left(config.deadlineMs + config.graceMs / 2),
     );
+    stopper.unref();
+    const backup = setTimeout(() => {
+      finish(
+        rec,
+        {
+          estado: "fallida",
+          resumen: `No se terminó: ${TIMEOUT}.`,
+          stopReason: "tiempo",
+        },
+        secrets,
+        receivedAt,
+      );
+      ctl.abort(TIMEOUT);
+    }, left(config.deadlineMs + config.graceMs));
     backup.unref();
 
     const run: Promise<void> = execute(
@@ -618,6 +629,7 @@ export function createApp(deps: AppDeps): App {
         );
       })
       .finally(() => {
+        clearTimeout(stopper);
         clearTimeout(backup);
         if (desktops.get(input.wsUrl) === slot) desktops.delete(input.wsUrl);
         markDone();

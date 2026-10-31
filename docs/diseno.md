@@ -288,7 +288,7 @@ Límites de esa medición:
 - **Contexto.** El escritorio expone VNC solo por WebSocket. Necesitamos controlar la duración del clic y la espera por la pantalla.
 - **Decisión.** RFB 3.8 sobre el WebSocket nativo de Node 24: autenticación VNC (DES), codificaciones Raw y CopyRect, imagen en memoria y PNG armado con `zlib`. Sin paquetes de npm.
 - **Descartado.** _noVNC dentro de un navegador_: un despliegue pesado y una capa más. _Clientes VNC por TCP_: requieren un puente al WebSocket. _Librerías de npm_: lo que corre en la imagen es lo que está en el repo.
-- **Consecuencias.** DES solo existe en Node 24 con el proveedor legacy de OpenSSL, así que todo proceso de Node lo necesita, también el de `pi` (`NODE_OPTIONS` en el Dockerfile y en el entorno del ejecutor). Sin compresión, más ancho de banda. Si el servidor exigiera otra codificación, la conexión falla con un error claro.
+- **Consecuencias.** DES solo existe en Node 24 con el proveedor legacy de OpenSSL. Lo necesita el proceso que abre la conexión VNC, que es el de `pi` de cada tarea y no el servidor: por eso va en `NODE_OPTIONS`, en el Dockerfile y en el entorno que arma el ejecutor. El `pi` de las notas por app no abre VNC y corre sin él. Sin compresión, más ancho de banda. Si el servidor exigiera otra codificación, la conexión falla con un error claro.
 
 ### ADR-6 · Memoria por app como notas de interfaz
 

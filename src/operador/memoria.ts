@@ -16,14 +16,17 @@ Recibes las notas actuales y la bitácora de una tarea. Devuelve las notas compl
 
 Incluye solo hechos de la interfaz que la bitácora muestra:
 - rutas de menú hasta cada pantalla (Menú ▸ Submenú ▸ Pantalla);
-- qué tiene cada pantalla: filtros, listas, pestañas, botones y su ubicación general (arriba, abajo, a la derecha);
-- nombres reales de los botones para guardar, confirmar, anular, exportar;
-- diálogos o avisos que aparecen, campos de solo lectura, listas que dependen de otro campo;
+- qué tiene cada pantalla: filtros, listas, botones y dónde están (barra derecha, abajo, arriba);
+- nombres reales de los botones para guardar, aplicar, anular, exportar, confirmar;
+- campos de solo lectura, listas desplegables, diálogos o avisos que aparecen;
 - trampas: búsquedas que distinguen tildes, paginación, acciones que no cierran el formulario.
 
-Nunca incluyas datos de registros (nombres, códigos, documentos, montos, fechas), el resultado de la tarea
-ni coordenadas en píxeles: la app puede cambiar de diseño. En la primera línea anota la versión de la app si
-aparece. Si la bitácora contradice las notas, gana la bitácora. Máximo 40 viñetas, en español.
+Nunca incluyas datos de registros (nombres de personas, códigos, montos, fechas) ni el resultado de la tarea.
+No anotes coordenadas ni posiciones en píxeles: solo nombres de menús, pantallas y botones, y su ubicación
+general (barra derecha, abajo). La app puede cambiar de diseño y las coordenadas quedarían viejas.
+En la primera línea anota la versión de la app que muestra la cabecera, si aparece. Si la bitácora muestra
+otra versión que la de las notas, revisa todas las notas contra lo nuevo. Si la bitácora contradice las
+notas, gana la bitácora. Máximo 40 líneas en viñetas, en español.
 Responde solo con las notas.`;
 
 export type OpcionesMemoria = {

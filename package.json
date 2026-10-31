@@ -1,0 +1,10 @@
+{
+  "name": "frontier-cdmx",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node --openssl-legacy-provider src/server.ts",
+    "test": "node --openssl-legacy-provider --test 'src/**/*.test.ts'"
+  }
+}

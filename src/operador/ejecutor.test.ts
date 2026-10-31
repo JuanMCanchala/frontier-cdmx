@@ -30,3 +30,8 @@ test("claveApp normaliza tildes y símbolos", () => {
 test("bitacora devuelve vacío si no hay traza", () => {
   assert.equal(bitacora("/no/existe", "x"), "");
 });
+
+test("armarResumen rescata la respuesta que el modelo dejó solo en el resumen", () => {
+  const r = armarResumen({ estado: "terminada", resumen: "Revisé tres páginas.\nrespuesta: 45" });
+  assert.deepEqual(r.split("\n"), ["respuesta: 45", "Revisé tres páginas."]);
+});

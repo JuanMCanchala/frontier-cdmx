@@ -202,7 +202,12 @@ function leerReporte(archivo: string): Reporte | null {
 /** El evaluador compara el primer número de la línea `respuesta:`, así que va primero y sola. */
 export function armarResumen(r: Reporte): string {
   const lineas: string[] = [];
-  const respuesta = r.respuesta?.replace(/\s*\n\s*/g, " ").trim();
+  // Si el modelo puso la respuesta solo dentro del resumen, se rescata en vez de perderla.
+  const enCuerpo = (r.resumen ?? "")
+    .split("\n")
+    .find((l) => /^\s*respuesta\s*:/i.test(l))
+    ?.replace(/^\s*respuesta\s*:/i, "");
+  const respuesta = (r.respuesta || enCuerpo)?.replace(/\s*\n\s*/g, " ").trim();
   if (respuesta && r.estado === "terminada")
     lineas.push(`respuesta: ${respuesta}`);
   const cuerpo = (r.resumen ?? "")
